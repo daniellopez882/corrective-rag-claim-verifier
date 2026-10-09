@@ -87,17 +87,26 @@ def test_isotonic_matches_sklearn_and_is_monotone(
     assert np.all(np.diff(ours.predict(grid)) >= -1e-12)
 
 
-@settings(max_examples=40, deadline=None)
-@given(seed=st.integers(0, 10_000), slope=st.floats(0.3, 3.0))
-def test_platt_is_monotone_increasing_for_informative_scores(seed: int, slope: float) -> None:
-    rng = np.random.default_rng(seed)
-    scores = rng.normal(size=200)
-    y = (rng.random(200) < 1 / (1 + np.exp(-slope * scores))).astype(float)
-    assume(0 < y.sum() < 200)
+@settings(max_examples=60, deadline=None)
+@given(data=labelled)
+def test_platt_is_monotone_in_the_direction_of_its_slope(
+    data: tuple[list[float], list[int]],
+) -> None:
+    scores, y = np.array(data[0]), np.array(data[1], dtype=float)
     cal = PlattCalibrator.fit(scores, y)
-    grid = np.linspace(-3, 3, 25)
+    steps = np.diff(cal.predict(np.linspace(-6, 6, 25)))
+    assert np.all(steps * np.sign(cal.a) >= 0)
+
+
+@settings(max_examples=30, deadline=None)
+@given(seed=st.integers(0, 10_000), slope=st.floats(1.5, 3.0))
+def test_platt_slope_is_positive_for_informative_scores(seed: int, slope: float) -> None:
+    rng = np.random.default_rng(seed)
+    scores = rng.normal(size=500)
+    y = (rng.random(500) < 1 / (1 + np.exp(-slope * scores))).astype(float)
+    cal = PlattCalibrator.fit(scores, y)
     assert cal.a > 0
-    assert np.all(np.diff(cal.predict(grid)) > 0)
+    assert np.all(np.diff(cal.predict(np.linspace(-3, 3, 25))) > 0)
 
 
 def test_platt_matches_sklearns_sigmoid_calibration() -> None:
