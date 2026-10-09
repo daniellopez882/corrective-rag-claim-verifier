@@ -44,6 +44,21 @@ def test_cross_encoder_prefers_the_relevant_passage(models) -> None:
     assert scores[0] > scores[1]
 
 
+def test_quantised_outputs_do_not_depend_on_batch_mates(models) -> None:
+    claim = "Does metformin lower blood glucose?"
+    passages = [
+        "Metformin reduced fasting glucose in patients.",
+        "The bridge was painted red in 1937 after a long public debate about its colour.",
+        "Glucose",
+    ]
+    together = models.cross_encoder.score([(claim, p) for p in passages])
+    alone = np.array([models.cross_encoder.score([(claim, p)])[0] for p in passages])
+    np.testing.assert_array_equal(together, alone)
+    nli_together = models.nli.predict([(p, claim) for p in passages])
+    nli_alone = np.stack([models.nli.predict([(p, claim)])[0] for p in passages])
+    np.testing.assert_array_equal(nli_together, nli_alone)
+
+
 def test_dense_vectors_are_unit_length(models) -> None:
     q = models.encoder.encode_queries(["insulin resistance"])
     d = models.encoder.encode_documents(

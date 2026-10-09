@@ -18,15 +18,26 @@ from crag_verifier.models import DenseEncoder, NLIModel, PairScorer
 
 _CHUNK = 400
 
+# Bumped whenever stored values stop matching what a fresh forward pass returns.
+# 2: the quantised models run one sequence at a time; version-1 values were batch-dependent.
+CACHE_VERSION = 2
+
 
 class ScoreCache:
     def __init__(self, path: Path):
         path.parent.mkdir(parents=True, exist_ok=True)
         self._db = sqlite3.connect(path)
-        self._db.execute(
-            "CREATE TABLE IF NOT EXISTS scores (model TEXT, key BLOB, value BLOB, "
-            "PRIMARY KEY (model, key))"
-        )
+        with self._db:
+            self._db.execute("CREATE TABLE IF NOT EXISTS meta (version INTEGER)")
+            row = self._db.execute("SELECT version FROM meta").fetchone()
+            if row is None or row[0] != CACHE_VERSION:
+                self._db.execute("DROP TABLE IF EXISTS scores")
+                self._db.execute("DELETE FROM meta")
+                self._db.execute("INSERT INTO meta VALUES (?)", (CACHE_VERSION,))
+            self._db.execute(
+                "CREATE TABLE IF NOT EXISTS scores (model TEXT, key BLOB, value BLOB, "
+                "PRIMARY KEY (model, key))"
+            )
         self.hits = 0
         self.misses = 0
 

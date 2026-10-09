@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import hashlib
 import io
+import sqlite3
 import tarfile
 from pathlib import Path
 
@@ -96,3 +97,24 @@ def test_score_cache_computes_each_pair_once(tmp_path: Path) -> None:
     np.testing.assert_allclose(nli.predict(pairs[:1]), LexicalNLI().predict(pairs[:1]), rtol=1e-6)
     assert ce.score([]).shape == (0,) and nli.predict([]).shape == (0, 3)
     cache.close()
+
+
+def test_score_cache_discards_values_from_another_version(tmp_path: Path) -> None:
+    path = tmp_path / "scores.sqlite"
+    pairs = [("insulin mice", "insulin lowered glucose in mice")]
+    cache = ScoreCache(path)
+    CachedPairScorer(OverlapCrossEncoder(), cache).score(pairs)
+    cache.close()
+
+    reopened = ScoreCache(path)
+    CachedPairScorer(OverlapCrossEncoder(), reopened).score(pairs)
+    assert reopened.hits == 1 and reopened.misses == 0
+    reopened.close()
+
+    with sqlite3.connect(path) as db:
+        db.execute("UPDATE meta SET version = version - 1")
+    db.close()
+    stale = ScoreCache(path)
+    CachedPairScorer(OverlapCrossEncoder(), stale).score(pairs)
+    assert stale.hits == 0 and stale.misses == 1
+    stale.close()

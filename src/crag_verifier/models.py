@@ -54,7 +54,7 @@ def softmax(logits: np.ndarray) -> np.ndarray:
 
 
 class _OnnxTextModel:
-    """Tokenizer + ONNX Runtime session with length-sorted batching."""
+    """Tokenizer + ONNX Runtime session with length-sorted batching (``batch`` rows per run)."""
 
     def __init__(self, model: HubModel, files: dict[str, Path], max_length: int, batch: int):
         import onnxruntime as ort
@@ -124,8 +124,17 @@ class OnnxDenseEncoder(_OnnxTextModel):
         return self._encode(texts)
 
 
+# The cross-encoder and NLI exports are dynamically quantised: each run derives one int8
+# activation scale from the whole input tensor, padding and batch-mates included. Batched,
+# a pair's score moved by up to 0.12 logits (cross-encoder) and 0.11 in probability (NLI)
+# with whatever else shared its batch, which broke the per-pair score cache and made the
+# service disagree with the benchmark. One sequence per run makes every output a function
+# of its pair alone, and on the benchmark CPU it was not slower.
+QUANTISED_BATCH = 1
+
+
 class OnnxCrossEncoder(_OnnxTextModel):
-    def __init__(self, files: dict[str, Path], max_length: int = 256, batch: int = 32):
+    def __init__(self, files: dict[str, Path], max_length: int = 256, batch: int = QUANTISED_BATCH):
         super().__init__(CROSS_ENCODER_MODEL, files, max_length, batch)
 
     def score(self, pairs: Sequence[tuple[str, str]]) -> np.ndarray:
@@ -136,7 +145,7 @@ class OnnxCrossEncoder(_OnnxTextModel):
 
 
 class OnnxNLI(_OnnxTextModel):
-    def __init__(self, files: dict[str, Path], max_length: int = 256, batch: int = 32):
+    def __init__(self, files: dict[str, Path], max_length: int = 256, batch: int = QUANTISED_BATCH):
         super().__init__(NLI_MODEL, files, max_length, batch)
         labels = {int(k): v.lower() for k, v in self.config["id2label"].items()}
         position = {name: idx for idx, name in labels.items()}
