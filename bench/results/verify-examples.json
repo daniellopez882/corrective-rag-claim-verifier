@@ -1,0 +1,276 @@
+{
+  "what": "POST /verify exchanges with the SciFact corpus, ONNX models and the policy fitted by the benchmark run; one warm-up request first",
+  "date": "2026-10-09",
+  "git_sha": "ad7dd1f413fde9d123ae8efb93347410582679b1",
+  "command": "uv run crag-verifier serve --port 8765, then POST /verify for each request below",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
+    "logical_cpus": 6,
+    "ram_gb": 11.9,
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.12.14",
+    "packages": {
+      "numpy": "2.5.3",
+      "onnxruntime": "1.31.0",
+      "tokenizers": "0.23.3",
+      "fastapi": "0.143.0",
+      "uvicorn": "0.54.0",
+      "huggingface-hub": "2.2.0"
+    },
+    "accelerator": "none (CPU only)"
+  },
+  "service": {
+    "status": "ok",
+    "version": "0.1.0",
+    "backend": "onnx",
+    "corpus_documents": 5183
+  },
+  "warmup_request": {
+    "claim": "Autophagy declines in aged organisms."
+  },
+  "exchanges": [
+    {
+      "request": {
+        "claim": "PD-1 triggering on monocytes reduces IL-10 production by monocytes."
+      },
+      "status": 200,
+      "response": {
+        "claim": "PD-1 triggering on monocytes reduces IL-10 production by monocytes.",
+        "system": "crag",
+        "verdict": "CONTRADICT",
+        "verdict_probability": 0.7755,
+        "action": "ambiguous",
+        "abstained": false,
+        "evaluator_confidence": 0.858,
+        "rewritten_query": "PD-1 triggering monocytes IL-10 production",
+        "evidence": [
+          {
+            "doc_id": 10648422,
+            "title": "Programmed death-1–induced interleukin-10 production by monocytes impairs CD4+ T cell activation during HIV infection",
+            "label": "CONTRADICT",
+            "probability": 0.7755,
+            "rationale_sentence_ids": [
+              3,
+              4,
+              5
+            ],
+            "rationale": [
+              {
+                "id": 3,
+                "text": "Here we show that high amounts of microbial products and inflammatory cytokines in the plasma of HIV-infected subjects lead to upregulation of PD-1 expression on monocytes that correlates with high plasma concentrations of IL-10."
+              },
+              {
+                "id": 4,
+                "text": "Triggering of PD-1 expressed on monocytes by PD-L1 expressed on various cell types induced IL-10 production and led to reversible CD4+ T cell dysfunction."
+              },
+              {
+                "id": 5,
+                "text": "We describe a new function for PD-1 whereby microbial products inhibit T cell expansion and function by upregulating PD-1 levels and IL-10 production by monocytes after binding of PD-1 by PD-L1."
+              }
+            ]
+          },
+          {
+            "doc_id": 9334631,
+            "title": "C-reactive protein decreases interleukin-10 secretion in activated human monocyte-derived macrophages via inhibition of cyclic AMP production.",
+            "label": "NOINFO",
+            "probability": 0.0,
+            "rationale_sentence_ids": [],
+            "rationale": []
+          },
+          {
+            "doc_id": 34469966,
+            "title": "Human Monocytes Engage an Alternative Inflammasome Pathway.",
+            "label": "NOINFO",
+            "probability": 0.0,
+            "rationale_sentence_ids": [],
+            "rationale": []
+          }
+        ],
+        "explanation": null,
+        "explanation_status": "not_requested",
+        "trace": [
+          {
+            "step": "retrieve",
+            "ms": 747.08,
+            "detail": {
+              "top": [
+                {
+                  "doc_id": 10648422,
+                  "ce_score": 6.3459
+                },
+                {
+                  "doc_id": 9334631,
+                  "ce_score": 2.4822
+                },
+                {
+                  "doc_id": 34469966,
+                  "ce_score": 2.2245
+                }
+              ],
+              "pool_size": 20
+            }
+          },
+          {
+            "step": "nli",
+            "ms": 531.98,
+            "detail": {
+              "sentences": 26
+            }
+          },
+          {
+            "step": "evaluate",
+            "ms": 0.08,
+            "detail": {
+              "features": {
+                "ce_top1": 6.3459,
+                "ce_gap12": 3.8637,
+                "bm25_dense_agreement": 0.3,
+                "nli_max_entail": 0.2944,
+                "nli_max_contradict": 0.9728
+              },
+              "confidence": 0.858,
+              "thresholds": {
+                "lower": 0.55,
+                "upper": 1.0
+              },
+              "action": "ambiguous",
+              "triage": true
+            }
+          },
+          {
+            "step": "re-retrieve",
+            "ms": 222.9,
+            "detail": {
+              "rewritten_query": "PD-1 triggering monocytes IL-10 production",
+              "top": [
+                10648422,
+                9334631,
+                34469966
+              ],
+              "pool_size": 22
+            }
+          },
+          {
+            "step": "refine",
+            "ms": 370.16,
+            "detail": {
+              "mode": "strips",
+              "abstracts": {
+                "10648422": {
+                  "entail": 0.1318,
+                  "contradict": 0.7755,
+                  "kept_sentence_ids": [
+                    3,
+                    4,
+                    5
+                  ]
+                },
+                "9334631": {
+                  "entail": 0.0,
+                  "contradict": 0.0,
+                  "kept_sentence_ids": []
+                },
+                "34469966": {
+                  "entail": 0.0,
+                  "contradict": 0.0,
+                  "kept_sentence_ids": []
+                }
+              }
+            }
+          },
+          {
+            "step": "aggregate",
+            "ms": 0.02,
+            "detail": {
+              "labels": {
+                "10648422": "CONTRADICT",
+                "9334631": "NOINFO",
+                "34469966": "NOINFO"
+              },
+              "params": {
+                "support": 0.05,
+                "contradict": 0.4
+              }
+            }
+          }
+        ]
+      }
+    },
+    {
+      "request": {
+        "claim": "5% of perinatal mortality is due to low birth weight."
+      },
+      "status": 200,
+      "response": {
+        "claim": "5% of perinatal mortality is due to low birth weight.",
+        "system": "crag",
+        "verdict": "NOINFO",
+        "verdict_probability": 0.0,
+        "action": "incorrect",
+        "abstained": true,
+        "evaluator_confidence": 0.1312,
+        "rewritten_query": null,
+        "evidence": [],
+        "explanation": null,
+        "explanation_status": "not_requested",
+        "trace": [
+          {
+            "step": "retrieve",
+            "ms": 595.24,
+            "detail": {
+              "top": [
+                {
+                  "doc_id": 17450673,
+                  "ce_score": -2.0875
+                },
+                {
+                  "doc_id": 26611834,
+                  "ce_score": -2.8063
+                },
+                {
+                  "doc_id": 7662395,
+                  "ce_score": -2.9849
+                }
+              ],
+              "pool_size": 20
+            }
+          },
+          {
+            "step": "nli",
+            "ms": 828.71,
+            "detail": {
+              "sentences": 39
+            }
+          },
+          {
+            "step": "evaluate",
+            "ms": 0.08,
+            "detail": {
+              "features": {
+                "ce_top1": -2.0875,
+                "ce_gap12": 0.7188,
+                "bm25_dense_agreement": 0.4,
+                "nli_max_entail": 0.0165,
+                "nli_max_contradict": 0.4568
+              },
+              "confidence": 0.1312,
+              "thresholds": {
+                "lower": 0.55,
+                "upper": 1.0
+              },
+              "action": "incorrect",
+              "triage": true
+            }
+          },
+          {
+            "step": "abstain",
+            "ms": 0.0,
+            "detail": {
+              "reason": "evaluator judged the retrieval wrong; answering NOINFO"
+            }
+          }
+        ]
+      }
+    }
+  ]
+}

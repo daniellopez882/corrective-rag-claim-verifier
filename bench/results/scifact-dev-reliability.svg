@@ -1,0 +1,81 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="500" height="404" viewBox="0 0 500 404" font-family="Helvetica, Arial, sans-serif" font-size="12">
+<rect width="500" height="404" fill="#ffffff"/>
+<text x="56" y="22" font-size="13" fill="#1a202c">SciFact dev: P(gold abstract in top 3)</text>
+<line x1="56.0" y1="352.0" x2="56.0" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="352.0" x2="368.0" y2="352.0" stroke="#edf0f4"/>
+<text x="56.0" y="368.0" text-anchor="middle" fill="#4a5568">0.0</text>
+<text x="48.0" y="356.0" text-anchor="end" fill="#4a5568">0.0</text>
+<line x1="87.2" y1="352.0" x2="87.2" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="320.8" x2="368.0" y2="320.8" stroke="#edf0f4"/>
+<line x1="118.4" y1="352.0" x2="118.4" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="289.6" x2="368.0" y2="289.6" stroke="#edf0f4"/>
+<text x="118.4" y="368.0" text-anchor="middle" fill="#4a5568">0.2</text>
+<text x="48.0" y="293.6" text-anchor="end" fill="#4a5568">0.2</text>
+<line x1="149.6" y1="352.0" x2="149.6" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="258.4" x2="368.0" y2="258.4" stroke="#edf0f4"/>
+<line x1="180.8" y1="352.0" x2="180.8" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="227.2" x2="368.0" y2="227.2" stroke="#edf0f4"/>
+<text x="180.8" y="368.0" text-anchor="middle" fill="#4a5568">0.4</text>
+<text x="48.0" y="231.2" text-anchor="end" fill="#4a5568">0.4</text>
+<line x1="212.0" y1="352.0" x2="212.0" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="196.0" x2="368.0" y2="196.0" stroke="#edf0f4"/>
+<line x1="243.2" y1="352.0" x2="243.2" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="164.8" x2="368.0" y2="164.8" stroke="#edf0f4"/>
+<text x="243.2" y="368.0" text-anchor="middle" fill="#4a5568">0.6</text>
+<text x="48.0" y="168.8" text-anchor="end" fill="#4a5568">0.6</text>
+<line x1="274.4" y1="352.0" x2="274.4" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="133.6" x2="368.0" y2="133.6" stroke="#edf0f4"/>
+<line x1="305.6" y1="352.0" x2="305.6" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="102.4" x2="368.0" y2="102.4" stroke="#edf0f4"/>
+<text x="305.6" y="368.0" text-anchor="middle" fill="#4a5568">0.8</text>
+<text x="48.0" y="106.4" text-anchor="end" fill="#4a5568">0.8</text>
+<line x1="336.8" y1="352.0" x2="336.8" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="71.2" x2="368.0" y2="71.2" stroke="#edf0f4"/>
+<line x1="368.0" y1="352.0" x2="368.0" y2="40.0" stroke="#edf0f4"/>
+<line x1="56.0" y1="40.0" x2="368.0" y2="40.0" stroke="#edf0f4"/>
+<text x="368.0" y="368.0" text-anchor="middle" fill="#4a5568">1.0</text>
+<text x="48.0" y="44.0" text-anchor="end" fill="#4a5568">1.0</text>
+<rect x="56" y="40.0" width="312" height="312" fill="none" stroke="#a0aec0"/>
+<line x1="56" y1="352.0" x2="368" y2="40.0" stroke="#a0aec0" stroke-dasharray="4 4"/>
+<text x="212.0" y="392" text-anchor="middle" fill="#2d3748">mean predicted probability</text>
+<text transform="translate(16 196.0) rotate(-90)" text-anchor="middle" fill="#2d3748">observed frequency</text>
+<polyline points="74.9,332.5 102.1,307.4 133.1,251.7 164.0,218.3 199.1,214.7 226.4,196.0 261.7,164.8 291.7,115.3 322.9,87.3 353.9,58.0" fill="none" stroke="#8a8f98" stroke-width="1.8"/>
+<circle cx="74.9" cy="332.5" r="7.3" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="102.1" cy="307.4" r="8.8" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="133.1" cy="251.7" r="8.8" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="164.0" cy="218.3" r="9.6" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="199.1" cy="214.7" r="8.5" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="226.4" cy="196.0" r="8.4" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="261.7" cy="164.8" r="9.1" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="291.7" cy="115.3" r="9.0" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="322.9" cy="87.3" r="9.4" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="353.9" cy="58.0" r="11.2" fill="#8a8f98" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<rect x="382" y="39" width="10" height="10" fill="#8a8f98"/>
+<text x="398" y="48" fill="#2d3748">raw (ECE 0.031)</text>
+<polyline points="76.0,352.0 103.2,305.8 134.3,255.2 164.6,214.4 198.5,218.3 227.0,202.2 260.9,154.4 290.7,110.5 322.5,87.3 353.0,59.1" fill="none" stroke="#2b6cb0" stroke-width="1.8"/>
+<circle cx="76.0" cy="352.0" r="7.0" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="103.2" cy="305.8" r="8.7" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="134.3" cy="255.2" r="9.0" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="164.6" cy="214.4" r="9.5" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="198.5" cy="218.3" r="8.8" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="227.0" cy="202.2" r="8.5" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="260.9" cy="154.4" r="9.1" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="290.7" cy="110.5" r="9.2" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="322.5" cy="87.3" r="9.4" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="353.0" cy="59.1" r="10.9" fill="#2b6cb0" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<rect x="382" y="59" width="10" height="10" fill="#2b6cb0"/>
+<text x="398" y="68" fill="#2d3748">platt (ECE 0.035)</text>
+<polyline points="62.1,352.0 105.4,289.6 124.2,248.0 160.5,227.2 195.6,218.3 238.9,118.0 265.1,179.9 298.7,40.0 326.5,86.8 354.6,67.5" fill="none" stroke="#c05621" stroke-width="1.8"/>
+<circle cx="62.1" cy="352.0" r="7.0" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="105.4" cy="289.6" r="10.1" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="124.2" cy="248.0" r="4.6" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="160.5" cy="227.2" r="11.4" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="195.6" cy="218.3" r="9.6" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="238.9" cy="118.0" r="5.9" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="265.1" cy="179.9" r="9.0" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="298.7" cy="40.0" r="4.2" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="326.5" cy="86.8" r="13.2" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<circle cx="354.6" cy="67.5" r="9.5" fill="#c05621" fill-opacity="0.55" stroke="#ffffff" stroke-width="0.8"/>
+<rect x="382" y="79" width="10" height="10" fill="#c05621"/>
+<text x="398" y="88" fill="#2d3748">isotonic (ECE 0.049)</text>
+</svg>
