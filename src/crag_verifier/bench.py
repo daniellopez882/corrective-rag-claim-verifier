@@ -17,7 +17,6 @@ import random
 import socket
 import subprocess
 import sys
-import tempfile
 import threading
 import time
 from dataclasses import dataclass
@@ -155,6 +154,7 @@ def run_official(labels: Path, predictions: Path, out: Path) -> dict[str, float]
     subprocess.run(
         [
             sys.executable,
+            "-I",  # isolated: the downloaded script sees only the standard library
             "-X",
             "utf8",
             str(script),
@@ -431,6 +431,7 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
             for m in ALL_MODELS
         },
         "data": {
+            "dataset": "SciFact (AllenAI), licence CC BY-NC 2.0",
             "corpus_documents": len(corpus),
             "train_claims": len(train),
             "dev_claims": len(dev),
@@ -444,9 +445,12 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
             "rerank_depth": pipeline.retriever.rerank_depth,
             "expand_depth": pipeline.retriever.expand_depth,
             "rrf_k": pipeline.retriever.rrf_k,
+            "bm25_k1": pipeline.retriever.bm25.k1,
+            "bm25_b": pipeline.retriever.bm25.b,
             "folds": cfg.folds,
             "seed": cfg.seed,
             "bootstrap_resamples": cfg.bootstrap_resamples,
+            "ci_level_percent": 95,
             "utility": "per claim: correct labelled abstracts minus wrong ones; abstain = 0",
         },
         "timings_s": timings,
@@ -464,7 +468,7 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
             "llm_explanation": "not run: needs an LLM endpoint; explanation is optional in /verify",
         },
         "artifacts": {
-            "predictions_dir": str(cfg.runs_dir),
+            "predictions_dir": cfg.runs_dir.as_posix(),
             "reliability_svg": reliability_path.name,
         },
     }
@@ -489,4 +493,5 @@ def write_results(result: dict[str, Any], out: Path) -> None:
 
 
 def default_runs_dir() -> Path:
-    return Path(tempfile.gettempdir()) / "crag-verifier-runs"
+    """Predictions and official metric files; ``bench/runs`` is git-ignored."""
+    return Path("bench") / "runs"

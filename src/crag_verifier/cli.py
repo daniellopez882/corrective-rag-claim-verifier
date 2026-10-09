@@ -94,9 +94,9 @@ def _cmd_bench(args: argparse.Namespace) -> int:
     from crag_verifier.bench import BenchConfig, default_runs_dir, run_benchmark, write_results
 
     if args.smoke:
-        args.train_limit = args.train_limit or 30
-        args.dev_limit = args.dev_limit or 15
-        args.corpus_sample = args.corpus_sample if args.corpus_sample is not None else 150
+        args.train_limit = args.train_limit or 25
+        args.dev_limit = args.dev_limit or 12
+        args.corpus_sample = args.corpus_sample if args.corpus_sample is not None else 120
         args.latency_requests = min(args.latency_requests, 5)
         args.bootstrap = min(args.bootstrap, 200)
     out = Path(args.out)

@@ -38,6 +38,7 @@ def test_matches_the_official_script_when_fetched(tmp_path: Path) -> None:
     subprocess.run(
         [
             sys.executable,
+            "-I",
             "-X",
             "utf8",
             str(script),
