@@ -1,0 +1,6 @@
+{"id": 1, "evidence": {"10": {"sentences": [0, 1, 2, 5], "label": "SUPPORT"}}}
+{"id": 2, "evidence": {"20": {"sentences": [0], "label": "CONTRADICT"}, "21": {"sentences": [3, 4], "label": "SUPPORT"}, "99": {"sentences": [1, 2], "label": "SUPPORT"}}}
+{"id": 3, "evidence": {"30": {"sentences": [0], "label": "CONTRADICT"}}}
+{"id": 4, "evidence": {"40": {"sentences": [3, 2, 1, 0], "label": "SUPPORT"}}}
+{"id": 5, "evidence": {}}
+{"id": 6, "evidence": {"60": {"sentences": [0, 1], "label": "CONTRADICT"}}}
