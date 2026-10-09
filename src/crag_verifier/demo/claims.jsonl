@@ -1,0 +1,18 @@
+{"id": 1, "claim": "Velorin lowers fasting blood glucose in mice.", "evidence": {"101": [{"sentences": [2], "label": "SUPPORT"}]}, "cited_doc_ids": [101]}
+{"id": 2, "claim": "Velorin changes body weight.", "evidence": {"101": [{"sentences": [4], "label": "CONTRADICT"}]}, "cited_doc_ids": [101]}
+{"id": 3, "claim": "Quastatin causes elevated liver enzymes.", "evidence": {"102": [{"sentences": [1], "label": "SUPPORT"}]}, "cited_doc_ids": [102]}
+{"id": 4, "claim": "Knockdown of TRX-9 reduces axon growth.", "evidence": {"103": [{"sentences": [1], "label": "CONTRADICT"}]}, "cited_doc_ids": [103]}
+{"id": 5, "claim": "Daily walking improves sleep quality in older adults.", "evidence": {"104": [{"sentences": [1], "label": "SUPPORT"}]}, "cited_doc_ids": [104]}
+{"id": 6, "claim": "Prevalence of Mirelle syndrome is higher in urban regions.", "evidence": {"105": [{"sentences": [2], "label": "CONTRADICT"}]}, "cited_doc_ids": [105]}
+{"id": 7, "claim": "Coffee intake shortens reaction time in rested participants.", "evidence": {"106": [{"sentences": [2], "label": "SUPPORT"}]}, "cited_doc_ids": [106]}
+{"id": 8, "claim": "Zinc supplementation shortens the duration of colds.", "evidence": {"107": [{"sentences": [0], "label": "CONTRADICT"}]}, "cited_doc_ids": [107]}
+{"id": 9, "claim": "Strain K4 degrades polyethylene film.", "evidence": {"108": [{"sentences": [1], "label": "SUPPORT"}]}, "cited_doc_ids": [108]}
+{"id": 10, "claim": "Evening blue light exposure suppresses melatonin.", "evidence": {"109": [{"sentences": [0], "label": "SUPPORT"}]}, "cited_doc_ids": [109]}
+{"id": 11, "claim": "Antibiotic courses reduce gut microbiome diversity.", "evidence": {"111": [{"sentences": [0], "label": "SUPPORT"}]}, "cited_doc_ids": [111]}
+{"id": 12, "claim": "Workers exposed to loud noise have higher blood pressure.", "evidence": {"112": [{"sentences": [0], "label": "SUPPORT"}]}, "cited_doc_ids": [112]}
+{"id": 13, "claim": "Saffron extract improves memory in children.", "evidence": {}, "cited_doc_ids": [101]}
+{"id": 14, "claim": "Tidal energy farms harm migrating whales.", "evidence": {}, "cited_doc_ids": [101]}
+{"id": 15, "claim": "Ferrovane is used in aircraft engines.", "evidence": {}, "cited_doc_ids": [110]}
+{"id": 16, "claim": "Green tea prevents seasonal allergies.", "evidence": {}, "cited_doc_ids": [101]}
+{"id": 17, "claim": "Velorin is approved for human use.", "evidence": {}, "cited_doc_ids": [101]}
+{"id": 18, "claim": "Quastatin lowers cholesterol in children.", "evidence": {}, "cited_doc_ids": [101]}
