@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+.hypothesis/
+.coverage
+htmlcov/
+
+# Fetched data, model files and derived indexes never live in the repo
+data/
+models/
+*.onnx
+*.npy
+*.npz
+*.sqlite
+*.tar.gz
+scifact/
+
+# Smoke benchmark output (headline results are committed explicitly)
+bench/results/smoke-*
+bench/runs/
+
+# Local env
+.env
+*.log
