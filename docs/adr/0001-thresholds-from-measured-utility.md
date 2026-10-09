@@ -52,3 +52,13 @@ Nothing on SciFact dev is used to choose thresholds, calibration or aggregator s
   monotone transform of the score, so calibration would not matter, and with about 800
   claims the realised-utility surface is a noisy step function.
 * **Optimising dev F1.** Leaks the evaluation set into the policy.
+
+## Outcome on SciFact train
+
+The published fit (`train_fit.thresholds` in `bench/results/scifact-dev.json`) hit the
+fallback. With strip-refined evidence, re-retrieval and refinement earned almost the same
+utility, so all three lines cross close to `p` = 0.55, and the envelope ran abstain,
+refine, re-retrieve. The grid search chose lower 0.55 and upper 1.0, which makes the policy
+"abstain or re-retrieve". With sentence-level evidence acting barely pays even on correct
+retrievals, and the envelope puts the lower threshold at 0.992. Both are results of the
+measured utilities rather than tuning, and the README reports them as such.
