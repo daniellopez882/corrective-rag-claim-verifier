@@ -141,7 +141,7 @@ def test_logistic_model_round_trips_and_handles_constant_features() -> None:
     y = (x[:, 0] > 0).astype(int)
     model = LogisticModel.fit(x, y)
     clone = LogisticModel.from_dict(model.to_dict())
-    np.testing.assert_allclose(model.predict_proba(x), clone.predict_proba(x))
+    np.testing.assert_allclose(model.decision_function(x), clone.decision_function(x))
     assert np.isfinite(model.decision_function(x)).all()
 
 

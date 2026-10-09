@@ -86,9 +86,6 @@ class LogisticModel:
         x = np.atleast_2d(np.asarray(x, dtype=np.float64))
         return ((x - self.mean) / self.scale) @ self.coef + self.intercept
 
-    def predict_proba(self, x: np.ndarray) -> np.ndarray:
-        return sigmoid(self.decision_function(x))
-
     def to_dict(self) -> dict[str, Any]:
         return {
             "mean": self.mean.tolist(),

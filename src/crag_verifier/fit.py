@@ -16,7 +16,7 @@ from __future__ import annotations
 
 import sys
 import time
-from collections.abc import Callable, Sequence
+from collections.abc import Callable, Iterator, Sequence
 from dataclasses import dataclass
 from typing import Any
 
@@ -38,7 +38,14 @@ from crag_verifier.evaluator import (
     select_calibration,
 )
 from crag_verifier.pipeline import FittedPolicy, InitialAnalysis, Pipeline
-from crag_verifier.policy import ACTIONS, Action, UtilityTable, decide, fit_thresholds
+from crag_verifier.policy import (
+    ACTIONS,
+    Action,
+    UtilityTable,
+    action_counts,
+    decide,
+    fit_thresholds,
+)
 from crag_verifier.retrieval import RetrievalResult
 from crag_verifier.scifact_metrics import claim_counts, evaluate
 from crag_verifier.strips import rationale_ids, select
@@ -60,6 +67,15 @@ class StderrProgress:
             print(f"[{stage}] {done}/{total} claims, {elapsed:.0f}s", file=sys.stderr, flush=True)
 
 
+def _each[T](items: Sequence[T], stage: str, progress: Progress | None) -> Iterator[T]:
+    for i, item in enumerate(items):
+        if progress:
+            progress(stage, i, len(items))
+        yield item
+    if progress:
+        progress(stage, len(items), len(items))
+
+
 @dataclass
 class ClaimRun:
     """Everything computed for one claim that does not depend on fitted parameters."""
@@ -75,15 +91,11 @@ def run_claims(
     pipeline: Pipeline, claims: Sequence[Claim], stage: str, progress: Progress | None
 ) -> list[ClaimRun]:
     runs = []
-    for i, claim in enumerate(claims):
-        if progress:
-            progress(stage, i, len(claims))
+    for claim in _each(claims, stage, progress):
         initial = pipeline.analyse(claim.text)
         rewritten, expanded = pipeline.expand(claim.text, initial.retrieval)
         y = gold_in_top(initial.retrieval, set(claim.evidence), pipeline.top_n)
         runs.append(ClaimRun(claim, initial, y, rewritten, expanded))
-    if progress:
-        progress(stage, len(claims), len(claims))
     return runs
 
 
@@ -108,11 +120,13 @@ def claim_utility(claim: Claim, prediction: dict[str, Any], fp_cost: float) -> f
     return float(tp - fp_cost * fp)
 
 
-def fit_strip_threshold(pipeline: Pipeline, runs: Sequence[ClaimRun]) -> tuple[float, float]:
+def fit_strip_threshold(
+    pipeline: Pipeline, runs: Sequence[ClaimRun], progress: Progress | None = None
+) -> tuple[float, float]:
     """Relevance cut-off that maximises sentence-selection F1 over the top-3 abstracts."""
     relevance = [
         pipeline.strip_relevance(r.claim.text, r.initial.retrieval.top(pipeline.top_n))
-        for r in runs
+        for r in _each(runs, "fit:strip-relevance", progress)
     ]
     all_scores = np.concatenate([s for rel in relevance for _, s in rel.values()] or [np.zeros(1)])
     candidates = np.unique(np.round(np.percentile(all_scores, np.arange(0, 100.1, 2.5)), 4))
@@ -156,7 +170,7 @@ def fit_policy(
     y = np.array([r.y for r in runs], dtype=np.int64)
     x = np.stack([r.initial.features for r in runs])
 
-    min_relevance, strip_f1 = fit_strip_threshold(pipeline, runs)
+    min_relevance, strip_f1 = fit_strip_threshold(pipeline, runs, progress)
 
     top = pipeline.top_n
     aggregator = {}
@@ -172,14 +186,14 @@ def fit_policy(
                 min_relevance,
                 r.initial.sentence_probs,
             )
-            for r in runs
+            for r in _each(runs, f"fit:evidence-{mode.value}", progress)
         ]
         aggregator[mode], aggregator_f1[mode.value] = fit_aggregator(claims, evidence_correct[mode])
         evidence_ambiguous[mode] = [
             pipeline.evidence(
                 r.claim.text, r.expanded.top(top), mode, min_relevance, r.initial.sentence_probs
             )
-            for r in runs
+            for r in _each(runs, f"fit:expanded-evidence-{mode.value}", progress)
         ]
 
     utilities: dict[EvidenceMode, dict[Action, np.ndarray]] = {}
@@ -222,7 +236,7 @@ def fit_policy(
             "method": how,
             "oof_mean_utility_policy": realised,
             "mean_utility_always": {a.value: float(np.mean(utilities[mode][a])) for a in ACTIONS},
-            "oof_action_counts": {a.value: sum(1 for c in chosen if c is a) for a in ACTIONS},
+            "oof_action_counts": action_counts(chosen),
         }
 
     report = {

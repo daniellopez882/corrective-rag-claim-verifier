@@ -41,7 +41,7 @@ from crag_verifier.evaluator import FEATURES, gold_in_top, out_of_fold_scores
 from crag_verifier.fetch import evaluator_path, scifact_dir
 from crag_verifier.fit import StderrProgress, claim_utility, fit_policy
 from crag_verifier.pipeline import SYSTEMS, System, Verifier
-from crag_verifier.policy import ACTIONS, Action
+from crag_verifier.policy import Action, action_counts
 from crag_verifier.reliability_svg import reliability_svg
 from crag_verifier.runtime import ModelSet, build_pipeline, load_models, load_scifact_corpus
 from crag_verifier.scifact_metrics import bootstrap, count_matrix, f1_scores
@@ -343,7 +343,7 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
             "description": SYSTEMS[System(name)].description,
             "official": official,
             "in_repo_metric_matches_official": agree,
-            "actions": {a.value: sum(1 for x in actions[name] if x is a) for a in ACTIONS},
+            "actions": action_counts(actions[name]),
             "mean_claim_utility": float(
                 np.mean([claim_utility(c, p, 1.0) for c, p in zip(dev, preds, strict=True)])
             ),
@@ -393,6 +393,20 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
                 }
             )
     abstention["examples"] = examples
+    write_jsonl(
+        cfg.runs_dir / "dev_claims.jsonl",
+        (
+            {
+                "id": claim.id,
+                "gold_noinfo": bool(y_noinfo[i]),
+                "gold_in_top3": bool(y_dev[i]),
+                "crag_confidence": confidences[i],
+                "actions": {name: actions[name][i].value for name in actions},
+                "predicted": {name: predictions[name][i]["evidence"] for name in predictions},
+            }
+            for i, claim in enumerate(dev)
+        ),
+    )
 
     latency: dict[str, Any] | str
     if cfg.latency_requests > 0:
@@ -407,6 +421,7 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
     cache.close()
     timings["total_s"] = time.perf_counter() - started
 
+    cfg.out.parent.mkdir(parents=True, exist_ok=True)
     reliability_path = cfg.out.with_name(cfg.out.stem + "-reliability.svg")
     reliability_path.write_text(
         reliability_svg(

@@ -10,6 +10,7 @@ import sys
 from pathlib import Path
 
 from crag_verifier.artifacts import data_dir
+from crag_verifier.runtime import BACKENDS
 
 
 def _cmd_fetch(args: argparse.Namespace) -> int:
@@ -145,7 +146,7 @@ def build_parser() -> argparse.ArgumentParser:
         default="crag",
         choices=["standard_rag", "always_expand", "crag_no_strips", "crag"],
     )
-    p.add_argument("--backend", default="onnx", choices=["onnx", "demo"])
+    p.add_argument("--backend", default="onnx", choices=BACKENDS)
     p.add_argument("--explain", action="store_true")
     p.set_defaults(func=_cmd_verify)
 
@@ -155,7 +156,7 @@ def build_parser() -> argparse.ArgumentParser:
     p.add_argument(
         "--backend",
         default=os.environ.get("CRAG_VERIFIER_BACKEND", "onnx"),
-        choices=["onnx", "demo"],
+        choices=BACKENDS,
     )
     p.set_defaults(func=_cmd_serve)
 

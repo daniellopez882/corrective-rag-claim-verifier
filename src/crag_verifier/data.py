@@ -53,9 +53,6 @@ class Corpus:
     def __getitem__(self, doc_id: int) -> Document:
         return self.documents[self.position[doc_id]]
 
-    def __contains__(self, doc_id: object) -> bool:
-        return doc_id in self.position
-
     def subset(self, doc_ids: Iterable[int]) -> Corpus:
         keep = set(doc_ids)
         return Corpus(d for d in self.documents if d.doc_id in keep)
