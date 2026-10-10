@@ -1,7 +1,7 @@
 {
   "benchmark": "SciFact dev, official claim-verification metrics",
   "date": "2026-10-10",
-  "git_sha": "cba0560ca5e2fe0e1913c17885ff0cf52699490e",
+  "git_sha": "f02b8b536a0edd2d71f894a2504b924c46cf9734",
   "command": "uv run crag-verifier bench --latency-requests 0",
   "machine": {
     "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
@@ -61,11 +61,11 @@
     "utility": "per claim: correct labelled abstracts minus wrong ones; abstain = 0"
   },
   "timings_s": {
-    "index_build_s": 1.383302200003527,
+    "index_build_s": 1.7488976000022376,
     "dense_encoding_s": 0.0,
-    "train_fit_s": 7.696069800003897,
-    "dev_systems_s": 60.212106799997855,
-    "total_s": 74.18127030000323
+    "train_fit_s": 12.214963499995065,
+    "dev_systems_s": 15.086349899997003,
+    "total_s": 37.12273630000709
   },
   "train_fit": {
     "n_claims": 809,
@@ -113,6 +113,22 @@
             "correct": -0.7174515235457064
           }
         },
+        "claims": {
+          "retrieval_correct": 448,
+          "retrieval_wrong": 361
+        },
+        "utility_sum": {
+          "retrieval_correct": {
+            "incorrect": 0.0,
+            "ambiguous": -37.0,
+            "correct": -40.0
+          },
+          "retrieval_wrong": {
+            "incorrect": 0.0,
+            "ambiguous": -260.0,
+            "correct": -259.0
+          }
+        },
         "envelope": [
           {
             "from": 0.0,
@@ -148,6 +164,22 @@
             "incorrect": 0.0,
             "ambiguous": -0.33240997229916897,
             "correct": -0.3296398891966759
+          }
+        },
+        "claims": {
+          "retrieval_correct": 448,
+          "retrieval_wrong": 361
+        },
+        "utility_sum": {
+          "retrieval_correct": {
+            "incorrect": 0.0,
+            "ambiguous": 68.0,
+            "correct": 69.0
+          },
+          "retrieval_wrong": {
+            "incorrect": 0.0,
+            "ambiguous": -120.0,
+            "correct": -119.0
           }
         },
         "envelope": [
@@ -275,7 +307,11 @@
           "correct": 300
         },
         "mean_claim_utility": -0.54,
-        "predicted_abstracts": 322
+        "predicted_abstracts": 322,
+        "abstract_labels": {
+          "correct_labels": 80,
+          "wrong_labels": 242
+        }
       },
       "always_expand": {
         "description": "always rewrite + dense re-retrieve, sentence-level NLI",
@@ -300,7 +336,11 @@
           "correct": 0
         },
         "mean_claim_utility": -0.5433333333333333,
-        "predicted_abstracts": 323
+        "predicted_abstracts": 323,
+        "abstract_labels": {
+          "correct_labels": 80,
+          "wrong_labels": 243
+        }
       },
       "crag_no_strips": {
         "description": "evaluator triage, sentence-level NLI",
@@ -325,7 +365,11 @@
           "correct": 0
         },
         "mean_claim_utility": 0.0,
-        "predicted_abstracts": 0
+        "predicted_abstracts": 0,
+        "abstract_labels": {
+          "correct_labels": 0,
+          "wrong_labels": 0
+        }
       },
       "standard_rag_strips": {
         "description": "top-3 abstracts, strip refinement",
@@ -350,7 +394,11 @@
           "correct": 300
         },
         "mean_claim_utility": -0.09,
-        "predicted_abstracts": 193
+        "predicted_abstracts": 193,
+        "abstract_labels": {
+          "correct_labels": 83,
+          "wrong_labels": 110
+        }
       },
       "always_expand_strips": {
         "description": "always rewrite + dense re-retrieve, strip refinement",
@@ -375,7 +423,11 @@
           "correct": 0
         },
         "mean_claim_utility": -0.09,
-        "predicted_abstracts": 193
+        "predicted_abstracts": 193,
+        "abstract_labels": {
+          "correct_labels": 83,
+          "wrong_labels": 110
+        }
       },
       "crag": {
         "description": "evaluator triage, strip refinement",
@@ -400,7 +452,11 @@
           "correct": 118
         },
         "mean_claim_utility": 0.016666666666666666,
-        "predicted_abstracts": 125
+        "predicted_abstracts": 125,
+        "abstract_labels": {
+          "correct_labels": 65,
+          "wrong_labels": 60
+        }
       }
     },
     "metric_parity_with_official": true,
@@ -646,6 +702,28 @@
             "ci95_low": -0.05418993562882043,
             "ci95_high": 0.003922182602160535,
             "share_of_resamples_at_or_below_zero": 0.949
+          }
+        },
+        "standard_rag_strips - crag": {
+          "system": "standard_rag_strips",
+          "baseline": "crag",
+          "abstract_label_only_f1": {
+            "estimate": 0.023713766496857025,
+            "ci95_low": -0.017753709644648938,
+            "ci95_high": 0.06860269273074852,
+            "share_of_resamples_at_or_below_zero": 0.1378
+          },
+          "abstract_rationalized_f1": {
+            "estimate": 0.012005839068132407,
+            "ci95_low": -0.022798104887888245,
+            "ci95_high": 0.049818063554414586,
+            "share_of_resamples_at_or_below_zero": 0.2618
+          },
+          "sentence_label_f1": {
+            "estimate": 0.023188106545529608,
+            "ci95_low": -0.003922182602160538,
+            "ci95_high": 0.05418993562882042,
+            "share_of_resamples_at_or_below_zero": 0.051
           }
         }
       }
