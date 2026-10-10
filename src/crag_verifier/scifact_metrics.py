@@ -104,6 +104,18 @@ def count_matrix(claims: Sequence[Claim], predictions: Sequence[dict[str, Any]])
     return np.stack([claim_counts(c, p) for c, p in zip(claims, predictions, strict=True)])
 
 
+def label_counts(counts: np.ndarray, claims: Sequence[int] | None = None) -> dict[str, int]:
+    """Correct and wrong abstract labels in a count matrix, over the given rows (all if None).
+
+    A wrong label is any labelled abstract that is not a correct one: a gold abstract with
+    the other label, or an abstract that is not gold evidence for the claim.
+    """
+    rows = counts if claims is None else counts[list(claims)]
+    correct = int(rows[:, _IDX["abstract_correct_label_only"]].sum())
+    retrieved = int(rows[:, _IDX["abstract_retrieved"]].sum())
+    return {"correct_labels": correct, "wrong_labels": retrieved - correct}
+
+
 def evaluate(claims: Sequence[Claim], predictions: Sequence[dict[str, Any]]) -> dict[str, float]:
     return f1_scores(count_matrix(claims, predictions).sum(axis=0))
 

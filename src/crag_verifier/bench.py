@@ -45,16 +45,18 @@ from crag_verifier.pipeline import SYSTEMS, System, Verifier
 from crag_verifier.policy import Action, action_counts
 from crag_verifier.reliability_svg import reliability_svg
 from crag_verifier.runtime import ModelSet, build_pipeline, load_models, load_scifact_corpus
-from crag_verifier.scifact_metrics import bootstrap, count_matrix, f1_scores
+from crag_verifier.scifact_metrics import bootstrap, count_matrix, f1_scores, label_counts
 
 PACKAGES = ("numpy", "onnxruntime", "tokenizers", "fastapi", "uvicorn", "huggingface-hub")
 
 # (system, baseline) pairs with a paired bootstrap CI. Every system against standard RAG;
-# CRAG also against both strip systems without triage, which isolates what triage adds.
+# CRAG also against both strip systems without triage, which isolates what triage adds,
+# and that difference read the other way round: what switching triage off gains.
 COMPARISONS: tuple[tuple[System, System], ...] = (
     *((s, System.STANDARD_RAG) for s in System if s is not System.STANDARD_RAG),
     (System.CRAG, System.STANDARD_RAG_STRIPS),
     (System.CRAG, System.ALWAYS_EXPAND_STRIPS),
+    (System.STANDARD_RAG_STRIPS, System.CRAG),
 )
 
 
@@ -283,13 +285,6 @@ def _evaluator_on_dev(
     return out
 
 
-def abstained_labels(counts: np.ndarray, abstained: list[int]) -> dict[str, int]:
-    """Correct and wrong abstract labels a system produced on the given claims."""
-    rows = counts[abstained]
-    correct = int(rows[:, 2].sum())  # abstract_correct_label_only
-    return {"correct_labels": correct, "wrong_labels": int(rows[:, 1].sum()) - correct}
-
-
 def run_benchmark(cfg: BenchConfig) -> tuple[dict[str, Any], dict[str, Any] | None]:
     """The results document and, when requests were timed, the latency document."""
     started = time.perf_counter()
@@ -365,6 +360,7 @@ def run_benchmark(cfg: BenchConfig) -> tuple[dict[str, Any], dict[str, Any] | No
                 np.mean([claim_utility(c, p, 1.0) for c, p in zip(dev, preds, strict=True)])
             ),
             "predicted_abstracts": int(counts[name][:, 1].sum()),
+            "abstract_labels": label_counts(counts[name]),
         }
     cis = bootstrap(
         counts,
@@ -400,7 +396,7 @@ def run_benchmark(cfg: BenchConfig) -> tuple[dict[str, Any], dict[str, Any] | No
             "gold_noinfo_claims": int(sum(y_noinfo)),
             "retrieval_wrong_claims": int(len(dev) - sum(y_dev)),
             "labels_on_abstained_claims_without_triage": {
-                other.value: abstained_labels(counts[other.value], abstained)
+                other.value: label_counts(counts[other.value], abstained)
                 for other in System
                 if not SYSTEMS[other].triage and SYSTEMS[other].evidence is SYSTEMS[system].evidence
             },

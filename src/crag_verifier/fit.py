@@ -244,6 +244,13 @@ def fit_policy(
         realised = float(np.mean([utilities[mode][a][i] for i, a in enumerate(chosen)]))
         threshold_report[mode.value] = {
             "utility_table": table.to_dict(),
+            # The table's means times these counts; with fp_cost 1 a sum is right minus
+            # wrong abstract labels over that group of claims.
+            "claims": {"retrieval_correct": int(y.sum()), "retrieval_wrong": int((y == 0).sum())},
+            "utility_sum": {
+                group: {a.value: float(utilities[mode][a][y == flag].sum()) for a in ACTIONS}
+                for group, flag in (("retrieval_correct", 1), ("retrieval_wrong", 0))
+            },
             "envelope": [
                 {"from": lo, "to": hi, "action": a.value} for lo, hi, a in envelope(table)
             ],

@@ -10,7 +10,13 @@ import pytest
 
 from crag_verifier.data import load_claims
 from crag_verifier.fetch import evaluator_path
-from crag_verifier.scifact_metrics import bootstrap, count_matrix, evaluate, f1_scores
+from crag_verifier.scifact_metrics import (
+    bootstrap,
+    count_matrix,
+    evaluate,
+    f1_scores,
+    label_counts,
+)
 
 FIXTURE = Path(__file__).parent / "fixtures" / "official_parity"
 
@@ -103,3 +109,18 @@ def test_vectorised_bootstrap_matches_scoring_each_resample() -> None:
     ci = result["intervals"]["base"]["sentence_label_f1"]
     assert ci["ci95_low"] == pytest.approx(np.percentile(looped, 2.5))
     assert ci["ci95_high"] == pytest.approx(np.percentile(looped, 97.5))
+
+
+def test_label_counts_split_labelled_abstracts_into_right_and_wrong() -> None:
+    gold, preds = _load()
+    counts = count_matrix(gold, preds)
+    metrics = evaluate(gold, preds)
+    every = label_counts(counts)
+    labelled = every["correct_labels"] + every["wrong_labels"]
+    assert labelled == sum(len(p["evidence"]) for p in preds)
+    assert every["correct_labels"] / labelled == pytest.approx(
+        metrics["abstract_label_only_precision"]
+    )
+    halves = [label_counts(counts, range(0, 2)), label_counts(counts, range(2, len(gold)))]
+    for key in every:
+        assert halves[0][key] + halves[1][key] == every[key]
