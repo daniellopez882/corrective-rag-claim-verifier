@@ -5,49 +5,55 @@ on:
     branches: [main]
   pull_request:
 
+permissions:
+  contents: read
+
+# Nothing here downloads SciFact or a model: the offline suite runs on fakes and fixtures,
+# and the container is checked on the demo backend, whose policy is fitted at startup.
 jobs:
-  lint-and-test:
+  offline:
     runs-on: ubuntu-latest
+    timeout-minutes: 15
+    env:
+      UV_FROZEN: "1"
     steps:
       - uses: actions/checkout@v4
       - uses: astral-sh/setup-uv@v6
         with:
+          version: "0.12.5"
           python-version: "3.12"
           enable-cache: true
-      - name: Install locked dependencies
-        run: uv sync --frozen
-      - name: Ruff lint
-        run: uv run ruff check .
-      - name: Ruff format
-        run: uv run ruff format --check .
-      - name: Tests (default suite, no network, no datasets)
+      - name: ruff check and ruff format --check
+        run: uv run ruff check . && uv run ruff format --check .
+      - name: offline pytest (metric parity fixture, policy properties, API contract)
         run: uv run pytest
+      - name: CLI abstains on a claim the demo corpus cannot decide
+        run: |
+          uv run crag-verifier verify --backend demo "Saffron extract improves memory in children." > out.json
+          python3 -c "import json; r = json.load(open('out.json')); assert r['abstained'] and r['verdict'] == 'NOINFO', r"
 
-  docker:
+  container:
     runs-on: ubuntu-latest
-    needs: lint-and-test
+    timeout-minutes: 20
+    needs: offline
     steps:
       - uses: actions/checkout@v4
-      - name: Build image
-        run: docker build -t crag-verifier:ci .
-      - name: Smoke run on the demo backend
+      - name: docker build
+        run: docker build --tag crag-verifier:ci .
+      - name: start on the demo backend and wait for the health probe
         run: |
-          docker run -d --name crag -p 8000:8000 -e CRAG_VERIFIER_BACKEND=demo crag-verifier:ci
-          status=starting
+          docker run --detach --name crag --publish 8000:8000 \
+            --env CRAG_VERIFIER_BACKEND=demo crag-verifier:ci
           for _ in $(seq 1 60); do
-            status=$(docker inspect -f '{{.State.Health.Status}}' crag)
-            [ "$status" = healthy ] && break
+            health=$(docker inspect --format '{{.State.Health.Status}}' crag)
+            [ "$health" = healthy ] && break
             sleep 2
           done
-          echo "health: $status"
-          test "$status" = healthy
-          test "$(docker exec crag id -u)" = 10001
-          curl -fsS -X POST localhost:8000/verify \
-            -H 'content-type: application/json' \
-            -d '{"claim": "Strain K4 degrades polyethylene film."}' > verify.json
-          python3 -c "import json; r = json.load(open('verify.json')); assert r['verdict'] in {'SUPPORT', 'CONTRADICT', 'NOINFO'}; print(r['verdict'], r['action'], r['evaluator_confidence'])"
-          code=$(curl -s -o /dev/null -w '%{http_code}' -X POST localhost:8000/verify -H 'content-type: application/json' -d '{"claim": ""}')
-          test "$code" = 422
-      - name: Container logs
+          echo "health: $health"
+          [ "$health" = healthy ]
+          [ "$(docker exec crag id -u)" = 10001 ]
+      - name: refine, abstain and re-retrieve paths, 422 and 413
+        run: python3 .github/container_smoke.py http://localhost:8000
+      - name: container log
         if: always()
         run: docker logs crag || true
