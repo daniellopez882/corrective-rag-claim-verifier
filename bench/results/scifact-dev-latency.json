@@ -1,0 +1,70 @@
+{
+  "benchmark": "POST /verify latency over loopback HTTP, SciFact corpus, ONNX models",
+  "date": "2026-10-09",
+  "git_sha": "ad7dd1f413fde9d123ae8efb93347410582679b1",
+  "command": "uv run crag-verifier bench --out bench/results/scifact-dev.json",
+  "machine": {
+    "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
+    "logical_cpus": 6,
+    "ram_gb": 11.9,
+    "os": "Windows-10-10.0.19045-SP0",
+    "python": "3.12.14",
+    "packages": {
+      "numpy": "2.5.3",
+      "onnxruntime": "1.31.0",
+      "tokenizers": "0.23.3",
+      "fastapi": "0.143.0",
+      "uvicorn": "0.54.0",
+      "huggingface-hub": "2.2.0"
+    },
+    "accelerator": "none (CPU only)"
+  },
+  "note": "Timed inside the full benchmark run at this commit. That run's quality numbers were superseded by a re-run without timing (see scifact-dev.json); /verify has not been re-timed since, so the policy below is the one in force when it was measured.",
+  "policy_thresholds": {
+    "sentences": {
+      "lower": 0.991761188579775,
+      "upper": 1.0
+    },
+    "strips": {
+      "lower": 0.55,
+      "upper": 1.0
+    }
+  },
+  "latency": {
+    "requests": 100,
+    "warmup_requests": 2,
+    "system": "crag",
+    "p50_ms": 1446.7961999762338,
+    "p95_ms": 2204.3259949830826,
+    "mean_ms": 1478.9342279994162,
+    "max_ms": 2747.457600024063,
+    "step_median_ms": {
+      "retrieve": 594.415,
+      "nli": 479.14,
+      "evaluate": 0.08,
+      "abstain": 0.0,
+      "re-retrieve": 219.26999999999998,
+      "refine": 313.675,
+      "aggregate": 0.02
+    },
+    "step_count": {
+      "retrieve": 100,
+      "nli": 100,
+      "evaluate": 100,
+      "abstain": 42,
+      "re-retrieve": 58,
+      "refine": 58,
+      "aggregate": 58
+    },
+    "client": "httpx, sequential, one connection, loopback"
+  },
+  "full_run_timings_s": {
+    "index_build_s": 1.1451239999732934,
+    "dense_encoding_s": 0.0,
+    "train_fit_s": 1225.768543000042,
+    "dev_systems_s": 455.2629241000395,
+    "latency_s": 151.08750679995865,
+    "total_s": 1837.747253599984
+  },
+  "full_run_timings_note": "wall time of every stage of that run, started with an empty score cache"
+}
