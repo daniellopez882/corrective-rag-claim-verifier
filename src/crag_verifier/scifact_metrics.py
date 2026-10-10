@@ -108,44 +108,67 @@ def evaluate(claims: Sequence[Claim], predictions: Sequence[dict[str, Any]]) -> 
     return f1_scores(count_matrix(claims, predictions).sum(axis=0))
 
 
+BOOTSTRAP_METRICS: tuple[str, ...] = (
+    "abstract_label_only_f1",
+    "abstract_rationalized_f1",
+    "sentence_label_f1",
+)
+
+
+def _f1_rows(summed: np.ndarray) -> dict[str, np.ndarray]:
+    """F1 of every metric for each row of summed count vectors."""
+    out: dict[str, np.ndarray] = {}
+    for name, (rel, ret, cor) in METRICS.items():
+        relevant, retrieved, correct = (
+            summed[:, _IDX[field]].astype(np.float64) for field in (rel, ret, cor)
+        )
+        zeros = np.zeros(len(summed))
+        precision = np.divide(correct, retrieved, out=zeros.copy(), where=retrieved > 0)
+        recall = np.divide(correct, relevant, out=zeros.copy(), where=relevant > 0)
+        both = precision + recall
+        out[f"{name}_f1"] = np.divide(2 * precision * recall, both, out=zeros, where=both > 0)
+    return out
+
+
 def bootstrap(
     counts: dict[str, np.ndarray],
-    baseline: str,
-    n_resamples: int = 1000,
+    comparisons: Sequence[tuple[str, str]],
+    n_resamples: int = 10000,
     seed: int = 13,
-    metrics: Sequence[str] = (
-        "abstract_label_only_f1",
-        "abstract_rationalized_f1",
-        "sentence_label_f1",
-    ),
-) -> dict[str, dict[str, dict[str, float]]]:
-    """Percentile 95% CIs per system, and paired CIs of the difference to ``baseline``.
+    metrics: Sequence[str] = BOOTSTRAP_METRICS,
+) -> dict[str, Any]:
+    """Percentile 95% CIs per system, and paired CIs for each (system, baseline) difference.
 
     Every system is scored on the same resampled claim indices, so differences are paired.
     """
     n = next(iter(counts.values())).shape[0]
     rng = np.random.default_rng(seed)
-    draws = rng.integers(0, n, size=(n_resamples, n))
-    values: dict[str, dict[str, np.ndarray]] = {}
-    for system, matrix in counts.items():
-        per_metric: dict[str, list[float]] = {m: [] for m in metrics}
-        for idx in draws:
-            scores = f1_scores(matrix[idx].sum(axis=0))
-            for m in metrics:
-                per_metric[m].append(scores[m])
-        values[system] = {m: np.array(v) for m, v in per_metric.items()}
-    result: dict[str, dict[str, dict[str, float]]] = {}
-    for system in counts:
-        result[system] = {}
+    weights = np.empty((n_resamples, n), dtype=np.int64)  # times each claim is drawn
+    for r in range(n_resamples):
+        weights[r] = np.bincount(rng.integers(0, n, size=n), minlength=n)
+    values = {system: _f1_rows(weights @ matrix) for system, matrix in counts.items()}
+    point = {system: f1_scores(matrix.sum(axis=0)) for system, matrix in counts.items()}
+
+    def interval(v: np.ndarray) -> dict[str, float]:
+        return {
+            "ci95_low": float(np.percentile(v, 2.5)),
+            "ci95_high": float(np.percentile(v, 97.5)),
+        }
+
+    differences: dict[str, Any] = {}
+    for system, baseline in comparisons:
+        entry: dict[str, Any] = {"system": system, "baseline": baseline}
         for m in metrics:
-            v = values[system][m]
-            entry = {
-                "ci95_low": float(np.percentile(v, 2.5)),
-                "ci95_high": float(np.percentile(v, 97.5)),
+            d = values[system][m] - values[baseline][m]
+            entry[m] = {
+                "estimate": point[system][m] - point[baseline][m],
+                **interval(d),
+                "share_of_resamples_at_or_below_zero": float(np.mean(d <= 0.0)),
             }
-            if system != baseline:
-                d = v - values[baseline][m]
-                entry["diff_vs_baseline_ci95_low"] = float(np.percentile(d, 2.5))
-                entry["diff_vs_baseline_ci95_high"] = float(np.percentile(d, 97.5))
-            result[system][m] = entry
-    return result
+        differences[f"{system} - {baseline}"] = entry
+    return {
+        "resamples": n_resamples,
+        "seed": seed,
+        "intervals": {s: {m: interval(values[s][m]) for m in metrics} for s in counts},
+        "differences": differences,
+    }

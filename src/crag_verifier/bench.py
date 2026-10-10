@@ -1,9 +1,10 @@
 """The benchmark harness behind ``crag-verifier bench``.
 
-One run: build or load the dense index, fit the policy on SciFact train, run the four
+One run: build or load the dense index, fit the policy on SciFact train, run the six
 systems on SciFact dev, score them with the official evaluator (and the in-repo metric,
 which must agree), bootstrap paired CIs, measure the evaluator's calibration, the action
-mix and abstention precision, and time real HTTP calls to /verify.
+mix and what abstaining gave up, and time real HTTP calls to /verify. The timing goes to
+its own file so that quality numbers can be re-run without re-timing on a busy machine.
 """
 
 from __future__ import annotations
@@ -47,6 +48,14 @@ from crag_verifier.runtime import ModelSet, build_pipeline, load_models, load_sc
 from crag_verifier.scifact_metrics import bootstrap, count_matrix, f1_scores
 
 PACKAGES = ("numpy", "onnxruntime", "tokenizers", "fastapi", "uvicorn", "huggingface-hub")
+
+# (system, baseline) pairs with a paired bootstrap CI. Every system against standard RAG;
+# CRAG also against both strip systems without triage, which isolates what triage adds.
+COMPARISONS: tuple[tuple[System, System], ...] = (
+    *((s, System.STANDARD_RAG) for s in System if s is not System.STANDARD_RAG),
+    (System.CRAG, System.STANDARD_RAG_STRIPS),
+    (System.CRAG, System.ALWAYS_EXPAND_STRIPS),
+)
 
 
 @dataclass
@@ -274,7 +283,15 @@ def _evaluator_on_dev(
     return out
 
 
-def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
+def abstained_labels(counts: np.ndarray, abstained: list[int]) -> dict[str, int]:
+    """Correct and wrong abstract labels a system produced on the given claims."""
+    rows = counts[abstained]
+    correct = int(rows[:, 2].sum())  # abstract_correct_label_only
+    return {"correct_labels": correct, "wrong_labels": int(rows[:, 1].sum()) - correct}
+
+
+def run_benchmark(cfg: BenchConfig) -> tuple[dict[str, Any], dict[str, Any] | None]:
+    """The results document and, when requests were timed, the latency document."""
     started = time.perf_counter()
     timings: dict[str, float] = {}
     root = data_dir()
@@ -349,9 +366,11 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
             ),
             "predicted_abstracts": int(counts[name][:, 1].sum()),
         }
-    cis = bootstrap(counts, System.STANDARD_RAG.value, n_resamples=cfg.bootstrap_resamples)
-    for name in systems:
-        systems[name]["bootstrap"] = cis[name]
+    cis = bootstrap(
+        counts,
+        [(a.value, b.value) for a, b in COMPARISONS],
+        n_resamples=cfg.bootstrap_resamples,
+    )
 
     # Evaluator diagnostics on dev (target from the initial retrieval).
     x_dev, y_dev, y_noinfo = [], [], []
@@ -369,7 +388,8 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
 
     abstention: dict[str, Any] = {}
     examples: list[dict[str, Any]] = []
-    for name in (System.CRAG_NO_STRIPS.value, System.CRAG.value):
+    for system in (s for s in System if SYSTEMS[s].triage):
+        name = system.value
         abstained = [i for i, a in enumerate(actions[name]) if a is Action.INCORRECT]
         n = len(abstained)
         abstention[name] = {
@@ -379,6 +399,11 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
             "precision_retrieval_wrong": (sum(1 - y_dev[i] for i in abstained) / n) if n else None,
             "gold_noinfo_claims": int(sum(y_noinfo)),
             "retrieval_wrong_claims": int(len(dev) - sum(y_dev)),
+            "labels_on_abstained_claims_without_triage": {
+                other.value: abstained_labels(counts[other.value], abstained)
+                for other in System
+                if not SYSTEMS[other].triage and SYSTEMS[other].evidence is SYSTEMS[system].evidence
+            },
         }
     for i, a in enumerate(actions[System.CRAG.value]):
         if a is Action.INCORRECT and len(examples) < 6:
@@ -408,7 +433,7 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
         ),
     )
 
-    latency: dict[str, Any] | str
+    latency: dict[str, Any] | None = None
     if cfg.latency_requests > 0:
         live = Verifier(
             build_pipeline(corpus, raw_models, root / "index")[0], policy
@@ -416,10 +441,14 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
         t = time.perf_counter()
         latency = measure_latency(live, dev[: cfg.latency_requests])
         timings["latency_s"] = time.perf_counter() - t
-    else:
-        latency = "not run (--latency-requests 0)"
     cache.close()
     timings["total_s"] = time.perf_counter() - started
+    provenance = {
+        "date": dt.datetime.now(dt.UTC).strftime("%Y-%m-%d"),
+        "git_sha": git_sha(),
+        "command": cfg.command,
+        "machine": machine_info(),
+    }
 
     cfg.out.parent.mkdir(parents=True, exist_ok=True)
     reliability_path = cfg.out.with_name(cfg.out.stem + "-reliability.svg")
@@ -430,12 +459,9 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
         encoding="utf-8",
     )
 
-    return {
+    result = {
         "benchmark": "SciFact dev, official claim-verification metrics",
-        "date": dt.datetime.now(dt.UTC).strftime("%Y-%m-%d"),
-        "git_sha": git_sha(),
-        "command": cfg.command,
-        "machine": machine_info(),
+        **provenance,
         "models": {
             m.key: {
                 "repo": m.repo_id,
@@ -474,9 +500,14 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
         "dev": {
             "systems": systems,
             "metric_parity_with_official": parity,
+            "bootstrap": cis,
             "evaluator": evaluator_report,
             "abstention": abstention,
-            "latency": latency,
+            "latency": (
+                f"see {latency_path(cfg.out).name}"
+                if latency is not None
+                else "not measured in this run (--latency-requests 0)"
+            ),
         },
         "not_run": {
             "llm_query_rewrite": "not run: needs an LLM endpoint; keyphrase rewriting is used",
@@ -486,6 +517,14 @@ def run_benchmark(cfg: BenchConfig) -> dict[str, Any]:
             "predictions_dir": cfg.runs_dir.as_posix(),
             "reliability_svg": reliability_path.name,
         },
+    }
+    if latency is None:
+        return result, None
+    return result, {
+        "benchmark": "POST /verify latency over loopback HTTP, SciFact corpus, ONNX models",
+        **provenance,
+        "policy_thresholds": policy.to_dict()["thresholds"],
+        "latency": latency,
     }
 
 
@@ -505,6 +544,10 @@ def _clean(value: Any) -> Any:
 def write_results(result: dict[str, Any], out: Path) -> None:
     out.parent.mkdir(parents=True, exist_ok=True)
     out.write_text(json.dumps(_clean(result), indent=2, allow_nan=False), encoding="utf-8")
+
+
+def latency_path(out: Path) -> Path:
+    return out.with_name(out.stem + "-latency.json")
 
 
 def default_runs_dir() -> Path:

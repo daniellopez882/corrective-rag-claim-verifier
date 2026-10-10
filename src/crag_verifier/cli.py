@@ -10,7 +10,12 @@ import sys
 from pathlib import Path
 
 from crag_verifier.artifacts import data_dir
+from crag_verifier.pipeline import System
 from crag_verifier.runtime import BACKENDS
+
+SYSTEM_NAMES = [s.value for s in System]
+HEADLINE_RESULTS = Path("bench") / "results" / "scifact-dev.json"
+SMOKE_RESULTS = Path("bench") / "results" / "smoke-scifact-dev.json"
 
 
 def _cmd_fetch(args: argparse.Namespace) -> int:
@@ -92,15 +97,26 @@ def _cmd_serve(args: argparse.Namespace) -> int:
 
 
 def _cmd_bench(args: argparse.Namespace) -> int:
-    from crag_verifier.bench import BenchConfig, default_runs_dir, run_benchmark, write_results
+    from crag_verifier.bench import (
+        BenchConfig,
+        default_runs_dir,
+        latency_path,
+        run_benchmark,
+        write_results,
+    )
 
     if args.smoke:
+        out = Path(args.out) if args.out else SMOKE_RESULTS
+        if not out.name.startswith("smoke-"):
+            print(f"--smoke output must be named smoke-*.json, got {out}", file=sys.stderr)
+            return 2
         args.train_limit = args.train_limit or 25
         args.dev_limit = args.dev_limit or 12
         args.corpus_sample = args.corpus_sample if args.corpus_sample is not None else 120
         args.latency_requests = min(args.latency_requests, 5)
         args.bootstrap = min(args.bootstrap, 200)
-    out = Path(args.out)
+    else:
+        out = Path(args.out) if args.out else HEADLINE_RESULTS
     cfg = BenchConfig(
         out=out,
         runs_dir=Path(args.runs_dir) if args.runs_dir else default_runs_dir() / out.stem,
@@ -112,13 +128,17 @@ def _cmd_bench(args: argparse.Namespace) -> int:
         save_policy=not args.smoke,
         command="uv run crag-verifier " + shlex.join(sys.argv[1:]),
     )
-    result = run_benchmark(cfg)
+    result, latency = run_benchmark(cfg)
     write_results(result, out)
+    written = [str(out)]
+    if latency is not None:
+        write_results(latency, latency_path(out))
+        written.append(str(latency_path(out)))
     summary = {
         name: {k: round(v, 4) for k, v in s["official"].items() if k.endswith("_f1")}
         for name, s in result["dev"]["systems"].items()
     }
-    print(json.dumps({"results": str(out), "dev_f1": summary}, indent=2))
+    print(json.dumps({"results": written, "dev_f1": summary}, indent=2))
     return 0
 
 
@@ -141,11 +161,7 @@ def build_parser() -> argparse.ArgumentParser:
 
     p = sub.add_parser("verify", help="verify one claim and print the /verify response")
     p.add_argument("claim")
-    p.add_argument(
-        "--system",
-        default="crag",
-        choices=["standard_rag", "always_expand", "crag_no_strips", "crag"],
-    )
+    p.add_argument("--system", default="crag", choices=SYSTEM_NAMES)
     p.add_argument("--backend", default="onnx", choices=BACKENDS)
     p.add_argument("--explain", action="store_true")
     p.set_defaults(func=_cmd_verify)
@@ -161,14 +177,25 @@ def build_parser() -> argparse.ArgumentParser:
     p.set_defaults(func=_cmd_serve)
 
     p = sub.add_parser("bench", help="run the full SciFact benchmark and write a results JSON")
-    p.add_argument("--out", default="bench/results/scifact-dev.json")
+    p.add_argument(
+        "--out",
+        help=f"results JSON (default: {HEADLINE_RESULTS.as_posix()}, "
+        f"or {SMOKE_RESULTS.as_posix()} with --smoke)",
+    )
     p.add_argument("--runs-dir", help="where predictions and official metric files go")
-    p.add_argument("--smoke", action="store_true", help="tiny subset; proves the harness runs")
+    p.add_argument(
+        "--smoke", action="store_true", help="tiny subset written to smoke-*; proves it runs"
+    )
     p.add_argument("--train-limit", type=int)
     p.add_argument("--dev-limit", type=int)
     p.add_argument("--corpus-sample", type=int, help="random extra abstracts beside cited ones")
-    p.add_argument("--latency-requests", type=int, default=100)
-    p.add_argument("--bootstrap", type=int, default=1000)
+    p.add_argument(
+        "--latency-requests",
+        type=int,
+        default=100,
+        help="timed /verify calls, written to <out>-latency.json; 0 skips the timing",
+    )
+    p.add_argument("--bootstrap", type=int, default=10000, help="paired resamples of dev")
     p.set_defaults(func=_cmd_bench)
     return parser
 

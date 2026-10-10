@@ -10,7 +10,7 @@ import pytest
 
 from crag_verifier.data import load_claims
 from crag_verifier.fetch import evaluator_path
-from crag_verifier.scifact_metrics import bootstrap, count_matrix, evaluate
+from crag_verifier.scifact_metrics import bootstrap, count_matrix, evaluate, f1_scores
 
 FIXTURE = Path(__file__).parent / "fixtures" / "official_parity"
 
@@ -76,12 +76,30 @@ def test_bootstrap_intervals_bracket_the_estimate_and_pair_systems() -> None:
     counts = count_matrix(gold, preds)
     empty = count_matrix(gold, [{"id": g.id, "evidence": {}} for g in gold])
     result = bootstrap(
-        {"base": counts, "same": counts.copy(), "none": empty}, "base", n_resamples=300
+        {"base": counts, "same": counts.copy(), "none": empty},
+        [("same", "base"), ("none", "base")],
+        n_resamples=300,
     )
     point = evaluate(gold, preds)["abstract_label_only_f1"]
-    ci = result["base"]["abstract_label_only_f1"]
+    ci = result["intervals"]["base"]["abstract_label_only_f1"]
     assert ci["ci95_low"] <= point <= ci["ci95_high"]
-    same = result["same"]["abstract_label_only_f1"]
-    assert same["diff_vs_baseline_ci95_low"] == same["diff_vs_baseline_ci95_high"] == 0.0
-    assert result["none"]["abstract_label_only_f1"]["ci95_high"] == 0.0
-    assert np.isfinite(result["base"]["sentence_label_f1"]["ci95_low"])
+    same = result["differences"]["same - base"]["abstract_label_only_f1"]
+    assert same["ci95_low"] == same["ci95_high"] == same["estimate"] == 0.0
+    none = result["differences"]["none - base"]["abstract_label_only_f1"]
+    assert none["estimate"] == pytest.approx(-point)
+    assert result["intervals"]["none"]["abstract_label_only_f1"]["ci95_high"] == 0.0
+    assert np.isfinite(result["intervals"]["base"]["sentence_label_f1"]["ci95_low"])
+
+
+def test_vectorised_bootstrap_matches_scoring_each_resample() -> None:
+    gold, preds = _load()
+    counts = count_matrix(gold, preds)
+    result = bootstrap({"base": counts}, [], n_resamples=50, seed=3)
+    rng = np.random.default_rng(3)
+    looped = []
+    for _ in range(50):
+        idx = rng.integers(0, len(gold), size=len(gold))
+        looped.append(f1_scores(counts[idx].sum(axis=0))["sentence_label_f1"])
+    ci = result["intervals"]["base"]["sentence_label_f1"]
+    assert ci["ci95_low"] == pytest.approx(np.percentile(looped, 2.5))
+    assert ci["ci95_high"] == pytest.approx(np.percentile(looped, 97.5))

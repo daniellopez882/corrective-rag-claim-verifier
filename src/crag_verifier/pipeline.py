@@ -1,4 +1,9 @@
-"""The corrective RAG decision flow and the four systems it is compared as."""
+"""The corrective RAG decision flow and the six systems it is compared as.
+
+The systems form a grid: retrieval policy (always the top 3, always re-retrieve, or let
+the evaluator triage) crossed with evidence handling (every sentence through NLI, or
+strip refinement). Only that grid separates what triage adds from what strips add.
+"""
 
 from __future__ import annotations
 
@@ -37,6 +42,8 @@ class System(StrEnum):
     STANDARD_RAG = "standard_rag"
     ALWAYS_EXPAND = "always_expand"
     CRAG_NO_STRIPS = "crag_no_strips"
+    STANDARD_RAG_STRIPS = "standard_rag_strips"
+    ALWAYS_EXPAND_STRIPS = "always_expand_strips"
     CRAG = "crag"
 
 
@@ -60,6 +67,15 @@ SYSTEMS: dict[System, SystemSpec] = {
     ),
     System.CRAG_NO_STRIPS: SystemSpec(
         True, Action.CORRECT, EvidenceMode.SENTENCES, "evaluator triage, sentence-level NLI"
+    ),
+    System.STANDARD_RAG_STRIPS: SystemSpec(
+        False, Action.CORRECT, EvidenceMode.STRIPS, "top-3 abstracts, strip refinement"
+    ),
+    System.ALWAYS_EXPAND_STRIPS: SystemSpec(
+        False,
+        Action.AMBIGUOUS,
+        EvidenceMode.STRIPS,
+        "always rewrite + dense re-retrieve, strip refinement",
     ),
     System.CRAG: SystemSpec(
         True, Action.CORRECT, EvidenceMode.STRIPS, "evaluator triage, strip refinement"
