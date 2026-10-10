@@ -1,8 +1,9 @@
 {
   "what": "POST /verify exchanges with the SciFact corpus, ONNX models and the policy fitted by the benchmark run; one warm-up request first",
-  "date": "2026-10-09",
-  "git_sha": "ad7dd1f413fde9d123ae8efb93347410582679b1",
+  "date": "2026-10-10",
+  "git_sha": "6f67467f93a6c40801462da700a0dbdcb260ee6e",
   "command": "uv run crag-verifier serve --port 8765, then POST /verify for each request below",
+  "note": "Step times in the traces come from single requests and move with machine load; scifact-dev-latency.json holds the /verify latency measurement.",
   "machine": {
     "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
     "logical_cpus": 6,
@@ -39,14 +40,14 @@
         "system": "crag",
         "verdict": "CONTRADICT",
         "verdict_probability": 0.7755,
-        "action": "ambiguous",
+        "action": "correct",
         "abstained": false,
         "evaluator_confidence": 0.858,
-        "rewritten_query": "PD-1 triggering monocytes IL-10 production",
+        "rewritten_query": null,
         "evidence": [
           {
             "doc_id": 10648422,
-            "title": "Programmed death-1–induced interleukin-10 production by monocytes impairs CD4+ T cell activation during HIV infection",
+            "title": "Programmed death-1\u2013induced interleukin-10 production by monocytes impairs CD4+ T cell activation during HIV infection",
             "label": "CONTRADICT",
             "probability": 0.7755,
             "rationale_sentence_ids": [
@@ -91,7 +92,7 @@
         "trace": [
           {
             "step": "retrieve",
-            "ms": 747.08,
+            "ms": 1589.01,
             "detail": {
               "top": [
                 {
@@ -112,14 +113,14 @@
           },
           {
             "step": "nli",
-            "ms": 531.98,
+            "ms": 1474.93,
             "detail": {
               "sentences": 26
             }
           },
           {
             "step": "evaluate",
-            "ms": 0.08,
+            "ms": 0.2,
             "detail": {
               "features": {
                 "ce_top1": 6.3459,
@@ -130,29 +131,16 @@
               },
               "confidence": 0.858,
               "thresholds": {
-                "lower": 0.55,
-                "upper": 1.0
+                "lower": 0.6815561038595773,
+                "upper": 0.6815561038595773
               },
-              "action": "ambiguous",
+              "action": "correct",
               "triage": true
             }
           },
           {
-            "step": "re-retrieve",
-            "ms": 222.9,
-            "detail": {
-              "rewritten_query": "PD-1 triggering monocytes IL-10 production",
-              "top": [
-                10648422,
-                9334631,
-                34469966
-              ],
-              "pool_size": 22
-            }
-          },
-          {
             "step": "refine",
-            "ms": 370.16,
+            "ms": 796.07,
             "detail": {
               "mode": "strips",
               "abstracts": {
@@ -188,8 +176,8 @@
                 "34469966": "NOINFO"
               },
               "params": {
-                "support": 0.05,
-                "contradict": 0.4
+                "support": 0.012,
+                "contradict": 0.5604
               }
             }
           }
@@ -216,7 +204,7 @@
         "trace": [
           {
             "step": "retrieve",
-            "ms": 595.24,
+            "ms": 1550.31,
             "detail": {
               "top": [
                 {
@@ -237,14 +225,14 @@
           },
           {
             "step": "nli",
-            "ms": 828.71,
+            "ms": 2587.82,
             "detail": {
               "sentences": 39
             }
           },
           {
             "step": "evaluate",
-            "ms": 0.08,
+            "ms": 0.1,
             "detail": {
               "features": {
                 "ce_top1": -2.0875,
@@ -255,8 +243,8 @@
               },
               "confidence": 0.1312,
               "thresholds": {
-                "lower": 0.55,
-                "upper": 1.0
+                "lower": 0.6815561038595773,
+                "upper": 0.6815561038595773
               },
               "action": "incorrect",
               "triage": true
