@@ -108,9 +108,9 @@ flowchart TD
     C --> D["NLI over every sentence of the top 3 abstracts"]
     D --> E["features: CE top-1, CE top-1 minus top-2,<br/>BM25/dense overlap, max entail, max contradict"]
     E --> F["logistic scorer + Platt calibrator<br/>p = P(gold abstract in top 3)"]
-    F -->|"p above upper (fitted: 0.68)"| G["CORRECT<br/>keep the top 3"]
-    F -.->|"lower < p ≤ upper: never taken,<br/>the fitted band is empty"| H["AMBIGUOUS<br/>keyphrase rewrite, dense re-retrieval,<br/>merge pools, rerank against the claim"]
-    F -->|"p at or below lower (fitted: 0.68)"| I["INCORRECT<br/>abstain: NOINFO, no evidence"]
+    F -->|"p above upper<br/>fitted: p above 0.68"| G["CORRECT<br/>keep the top 3"]
+    F -.->|"lower ≤ p ≤ upper<br/>never taken: fitted lower = upper"| H["AMBIGUOUS<br/>keyphrase rewrite, dense re-retrieval,<br/>merge pools, rerank against the claim"]
+    F -->|"p below lower<br/>fitted: p ≤ 0.68"| I["INCORRECT<br/>abstain: NOINFO, no evidence"]
     H -.-> J
     G --> J["refine: split into sentence strips, keep the relevant ones,<br/>recompose them in order"]
     J --> K["NLI on the recomposed passage, label thresholds per abstract"]
