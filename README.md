@@ -1,5 +1,7 @@
 # corrective-rag-claim-verifier
 
+[![ci](https://github.com/daniellopez882/corrective-rag-claim-verifier/actions/workflows/ci.yml/badge.svg)](https://github.com/daniellopez882/corrective-rag-claim-verifier/actions/workflows/ci.yml) ![python](https://img.shields.io/badge/python-3.12-3776AB?logo=python&logoColor=white) ![licence](https://img.shields.io/badge/licence-MIT-green)
+
 A FastAPI service that checks a scientific claim against the 5,183 SciFact abstracts and
 answers SUPPORT, CONTRADICT or NOINFO with the sentence ids that justify it. Before it
 trusts what it retrieved, a small evaluator estimates the probability that a gold abstract
