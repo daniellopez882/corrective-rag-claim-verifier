@@ -7,7 +7,7 @@ import numpy as np
 from hypothesis import given, settings
 from hypothesis import strategies as st
 
-from crag_verifier.bm25 import BM25Index
+from crag_verifier.bm25 import BM25Index, top_k_indices
 from crag_verifier.text import content_tokens, stem
 
 VOCAB = ["gene", "cell", "mouse", "tumor", "insulin", "protein", "risk", "dose"]
@@ -55,6 +55,17 @@ def test_search_is_sorted_and_positive(docs: list[list[str]], query: list[str]) 
 def test_ties_break_by_document_order() -> None:
     index = BM25Index([["gene"], ["gene"], ["cell"]])
     assert [i for i, _ in index.search(["gene"], k=3)] == [0, 1]
+
+
+@settings(max_examples=200, deadline=None)
+@given(
+    scores=st.lists(st.integers(0, 3), min_size=1, max_size=60),
+    k=st.integers(0, 70),
+)
+def test_top_k_keeps_the_lowest_indices_among_ties(scores: list[int], k: int) -> None:
+    # Few distinct values, so most cut-offs fall inside a run of tied scores.
+    expected = sorted(range(len(scores)), key=lambda i: (-scores[i], i))[:k]
+    assert top_k_indices(np.array(scores, dtype=np.float64), k).tolist() == expected
 
 
 def test_rarer_terms_get_higher_idf_and_unseen_terms_the_maximum() -> None:

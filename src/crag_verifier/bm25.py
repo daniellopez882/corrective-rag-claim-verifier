@@ -68,9 +68,23 @@ class BM25Index:
     def search(self, query: Sequence[str], k: int) -> list[tuple[int, float]]:
         """Top-k (doc index, score) with score > 0, ties broken by lower index."""
         scores = self.scores(query)
-        k = min(k, self.n_docs)
-        if k <= 0:
-            return []
-        top = np.argpartition(-scores, k - 1)[:k]
-        top = top[np.lexsort((top, -scores[top]))]
-        return [(int(i), float(scores[i])) for i in top if scores[i] > 0.0]
+        return [(int(i), float(scores[i])) for i in top_k_indices(scores, k) if scores[i] > 0.0]
+
+
+def top_k_indices(scores: np.ndarray, k: int) -> np.ndarray:
+    """Indices of the k highest scores, best first, ties broken by lower index.
+
+    A plain argpartition picks an arbitrary subset of the documents tied at the k-th
+    score, so every document tied with the k-th one is sorted before truncating.
+    """
+    n = len(scores)
+    k = min(k, n)
+    if k <= 0:
+        return np.empty(0, dtype=np.int64)
+    if k < n:
+        kth = np.partition(scores, n - k)[n - k]
+        candidates = np.flatnonzero(scores >= kth)
+    else:
+        candidates = np.arange(n)
+    order = np.lexsort((candidates, -scores[candidates]))
+    return candidates[order[:k]]

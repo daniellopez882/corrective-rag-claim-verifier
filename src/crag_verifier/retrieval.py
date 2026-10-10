@@ -6,7 +6,7 @@ from dataclasses import dataclass
 
 import numpy as np
 
-from crag_verifier.bm25 import BM25Index
+from crag_verifier.bm25 import BM25Index, top_k_indices
 from crag_verifier.data import Corpus
 from crag_verifier.models import DenseEncoder, PairScorer
 from crag_verifier.text import content_tokens
@@ -74,10 +74,7 @@ class HybridRetriever:
     def dense_search(self, query: str, k: int) -> list[int]:
         q = self.encoder.encode_queries([query])[0]
         sims = self.doc_vectors @ q.astype(np.float32)
-        k = min(k, len(sims))
-        top = np.argpartition(-sims, k - 1)[:k]
-        top = top[np.lexsort((top, -sims[top]))]
-        return [self._ids[i] for i in top]
+        return [self._ids[i] for i in top_k_indices(sims, k)]
 
     def _rerank(self, claim: str, doc_ids: list[int], known: dict[int, float]) -> list[Candidate]:
         missing = [d for d in doc_ids if d not in known]
