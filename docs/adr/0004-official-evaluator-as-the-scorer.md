@@ -6,7 +6,7 @@ Status: accepted
 
 Claim-verification numbers are only comparable with published SciFact results if they
 come from the official scoring code. Bootstrap confidence intervals, however, need the
-metric recomputed on a thousand resamples of the dev claims, which is slow and awkward
+metric recomputed on 10,000 resamples of the dev claims, which is slow and awkward
 through a script that reads and writes files.
 
 ## Decision
@@ -20,7 +20,9 @@ through a script that reads and writes files.
   JSON), and a committed fixture of edge cases holds the official script's recorded output
   for the offline test suite.
 * Paired bootstrap: every system is scored on the same resampled claim indices, so the
-  confidence interval of the difference to standard RAG is a paired one.
+  confidence interval of a difference between two systems is a paired one. A resample is
+  a vector of draw counts per claim, so one matrix product turns the per-claim count
+  vectors into the summed counts of all resamples at once.
 
 ## Consequences
 
