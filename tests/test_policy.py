@@ -36,7 +36,23 @@ def test_boundaries_go_to_the_middle_action() -> None:
 def test_equal_thresholds_make_a_two_way_rule() -> None:
     th = Thresholds(0.4, 0.4)
     assert decide(0.39, th) is Action.INCORRECT
+    assert decide(0.4, th) is Action.INCORRECT  # no AMBIGUOUS band to hedge into
     assert decide(0.41, th) is Action.CORRECT
+
+
+def test_degenerate_rules_at_the_ends_never_reach_the_absent_actions() -> None:
+    always_act = Thresholds(0.0, 0.0)
+    assert {decide(p, always_act) for p in (0.0, 0.5, 1.0)} == {Action.CORRECT}
+    always_abstain = Thresholds(1.0, 1.0)
+    assert {decide(p, always_abstain) for p in (0.0, 0.5, 1.0)} == {Action.INCORRECT}
+
+
+def test_a_dominated_middle_action_is_not_chosen_at_zero_confidence() -> None:
+    # CORRECT beats both other actions everywhere, AMBIGUOUS is heavily penalised.
+    t = table(correct=(0.0, -5.0, 1.0), wrong=(0.0, -5.0, 0.5))
+    th, how = fit_thresholds(t, np.linspace(0, 1, 11))
+    assert how == "envelope"
+    assert decide(0.0, th) is Action.CORRECT
 
 
 @pytest.mark.parametrize("lower,upper", [(-0.1, 0.5), (0.6, 0.5), (0.2, 1.01)])
@@ -99,6 +115,27 @@ def test_non_monotone_envelope_falls_back_to_the_best_threshold_rule() -> None:
         total(Thresholds(lo, hi)) for lo, hi in itertools.combinations_with_replacement(grid, 2)
     )
     assert total(th) == pytest.approx(best)
+
+
+utility = st.floats(-2.0, 2.0, allow_nan=False)
+
+
+@settings(max_examples=200, deadline=None)
+@given(
+    correct=st.tuples(st.just(0.0), utility, utility),
+    wrong=st.tuples(st.just(0.0), utility, utility),
+)
+def test_envelope_rule_is_utility_optimal_at_every_confidence(
+    correct: tuple[float, float, float], wrong: tuple[float, float, float]
+) -> None:
+    t = table(correct, wrong)
+    th, how = fit_thresholds(t, np.linspace(0, 1, 11))
+    if how != "envelope":
+        return  # non-monotone envelopes have no exact threshold rule
+    p = np.unique(np.concatenate([np.linspace(0, 1, 201), [th.lower, th.upper]]))
+    eu = t.expected(p)
+    chosen = eu[np.arange(len(p)), [decide(float(v), th).order for v in p]]
+    np.testing.assert_allclose(chosen, eu.max(axis=1), atol=1e-9)
 
 
 def test_utility_table_needs_both_outcomes() -> None:

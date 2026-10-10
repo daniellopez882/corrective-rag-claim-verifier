@@ -41,6 +41,8 @@ class Thresholds:
     """p < lower -> INCORRECT, p > upper -> CORRECT, otherwise AMBIGUOUS.
 
     Ties go to the middle action: at a boundary the service hedges instead of committing.
+    ``lower == upper`` means there is no AMBIGUOUS band. The single cut point then goes to
+    INCORRECT, except a cut at 0, which is how a rule that never abstains is written.
     """
 
     lower: float
@@ -54,12 +56,20 @@ class Thresholds:
         return {"lower": self.lower, "upper": self.upper}
 
 
+def decide_many(p: np.ndarray, thresholds: Thresholds) -> np.ndarray:
+    """Action index (position in ``ACTIONS``) for every confidence in ``p``."""
+    p = np.asarray(p, dtype=np.float64)
+    lower, upper = thresholds.lower, thresholds.upper
+    codes = np.ones(p.shape, dtype=np.int64)
+    codes[p < lower] = 0
+    codes[p > upper] = 2
+    if lower == upper:
+        codes[p == lower] = 2 if lower == 0.0 else 0
+    return codes
+
+
 def decide(p: float, thresholds: Thresholds) -> Action:
-    if p < thresholds.lower:
-        return Action.INCORRECT
-    if p > thresholds.upper:
-        return Action.CORRECT
-    return Action.AMBIGUOUS
+    return ACTIONS[int(decide_many(np.array([p]), thresholds)[0])]
 
 
 @dataclass(frozen=True)
@@ -138,18 +148,17 @@ def fit_thresholds(table: UtilityTable, p_train: np.ndarray) -> tuple[Thresholds
 
 def _grid_thresholds(table: UtilityTable, p: np.ndarray, steps: int = 101) -> Thresholds:
     eu = table.expected(p)
+    rows = np.arange(len(p))
     grid = np.linspace(0.0, 1.0, steps)
-    best: tuple[float, float, float] | None = None
+    best: tuple[float, Thresholds] | None = None
     for i, lower in enumerate(grid):
-        below = p < lower
         for upper in grid[i:]:
-            above = p > upper
-            middle = ~(below | above)
-            total = eu[below, 0].sum() + eu[middle, 1].sum() + eu[above, 2].sum()
+            candidate = Thresholds(float(lower), float(upper))
+            total = float(eu[rows, decide_many(p, candidate)].sum())
             if best is None or total > best[0] + 1e-12:
-                best = (float(total), float(lower), float(upper))
+                best = (total, candidate)
     assert best is not None
-    return Thresholds(lower=best[1], upper=best[2])
+    return best[1]
 
 
 def action_counts(actions: list[Action]) -> dict[str, int]:
