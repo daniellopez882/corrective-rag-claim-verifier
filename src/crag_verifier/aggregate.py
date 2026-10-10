@@ -125,13 +125,33 @@ def verdict(decisions: Sequence[DocDecision]) -> tuple[Verdict, float]:
     return best.label, best.probability
 
 
-GRID = np.round(np.arange(0.05, 1.0, 0.05), 2)
+GRID = np.round(np.arange(0.0, 1.0, 0.05), 2)
+
+
+def threshold_candidates(values: np.ndarray) -> np.ndarray:
+    """The 0.05 grid from 0 plus the 2.5% quantiles of the observed probabilities.
+
+    The quantiles let the fit settle between grid steps where the probabilities bunch up,
+    which the strip-mode entailment does close to zero.
+    """
+    quantiles = np.quantile(values, np.linspace(0.0, 1.0, 41)) if len(values) else np.empty(0)
+    return np.unique(np.concatenate([GRID, np.round(quantiles, 4)]))
+
+
+@dataclass(frozen=True)
+class AggregatorFit:
+    params: AggregatorParams
+    label_only_f1: float  # on the claims it was fitted on
+    edges: dict[str, str]  # threshold name -> "lowest" or "highest" candidate it landed on
+
+    def report(self) -> dict[str, Any]:
+        return {**self.params.to_dict(), "label_only_f1": self.label_only_f1, "edges": self.edges}
 
 
 def fit_aggregator(
     claims: Sequence[Claim], evidence: Sequence[Sequence[DocEvidence]]
-) -> tuple[AggregatorParams, float]:
-    """Grid-search both thresholds for the best abstract label-only F1 on these claims."""
+) -> AggregatorFit:
+    """Search both thresholds for the best abstract label-only F1 on these claims."""
     gold_total = sum(len(c.evidence) for c in claims)
     rows = []
     for claim, docs in zip(claims, evidence, strict=True):
@@ -152,10 +172,12 @@ def fit_aggregator(
     arr = np.array(rows, dtype=np.float64)
     entail, contradict, code = arr[:, 0], arr[:, 1], arr[:, 2]
     has_sup, has_con = arr[:, 3] > 0, arr[:, 4] > 0
+    support_grid = threshold_candidates(entail[has_sup])
+    contradict_grid = threshold_candidates(contradict[has_con])
     best: tuple[float, float, float] | None = None
-    for ts in GRID:
+    for ts in support_grid:
         sup_ok = (entail >= ts) & has_sup
-        for tc in GRID:
+        for tc in contradict_grid:
             con_ok = (contradict >= tc) & has_con
             pick_sup = sup_ok & (~con_ok | (entail >= contradict))
             pick_con = con_ok & ~pick_sup
@@ -167,4 +189,13 @@ def fit_aggregator(
             if best is None or f1 > best[0] + 1e-12:
                 best = (f1, float(ts), float(tc))
     assert best is not None
-    return AggregatorParams(best[1], best[2]), best[0]
+    edges = {}
+    for name, value, grid in (
+        ("support", best[1], support_grid),
+        ("contradict", best[2], contradict_grid),
+    ):
+        if value == grid[0]:
+            edges[name] = "lowest"
+        elif value == grid[-1]:
+            edges[name] = "highest"
+    return AggregatorFit(AggregatorParams(best[1], best[2]), best[0], edges)

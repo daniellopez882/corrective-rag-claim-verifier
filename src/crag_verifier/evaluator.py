@@ -108,6 +108,29 @@ def select_calibration(
     return min(losses, key=lambda m: (losses[m], m)), losses
 
 
+def nested_probabilities(
+    x: np.ndarray, y: np.ndarray, method: str, k: int = 5, seed: int = 0
+) -> np.ndarray:
+    """Calibrated P(y = 1) for every row from a scorer and a calibrator that never saw it.
+
+    Each outer fold repeats the whole fit on the other folds (scorer on their rows,
+    calibrator on their inner out-of-fold scores), so these probabilities measure the
+    procedure the deployed evaluator went through, not a calibrator scored on its own data.
+    """
+    y = np.asarray(y)
+    k = max(2, min(k, int(y.sum()), int(len(y) - y.sum())))
+    folds = stratified_folds(y, k, seed)
+    p = np.empty(len(y), dtype=np.float64)
+    for f in range(k):
+        test = folds == f
+        inner = out_of_fold_scores(x[~test], y[~test], k=k, seed=seed)
+        calibrator = fit_calibrator(method, inner, y[~test])
+        p[test] = calibrator.predict(
+            LogisticModel.fit(x[~test], y[~test]).decision_function(x[test])
+        )
+    return p
+
+
 @dataclass
 class RetrievalEvaluator:
     model: LogisticModel
@@ -125,12 +148,12 @@ class RetrievalEvaluator:
     ) -> tuple[RetrievalEvaluator, np.ndarray]:
         """Cross-validated calibration: the calibrator sees only out-of-fold scores.
 
-        Returns the evaluator (scorer refit on all rows) and the out-of-fold calibrated
-        probabilities, which the threshold fit uses.
+        Returns the evaluator (scorer refit on all rows) and held-out calibrated
+        probabilities from ``nested_probabilities``, which the threshold fit uses.
         """
         oof = out_of_fold_scores(x, y, k=k, seed=seed)
-        calibrator = fit_calibrator(method, oof, y)
-        return cls(LogisticModel.fit(x, y), calibrator), calibrator.predict(oof)
+        evaluator = cls(LogisticModel.fit(x, y), fit_calibrator(method, oof, y))
+        return evaluator, nested_probabilities(x, y, method, k=k, seed=seed)
 
     def to_dict(self) -> dict[str, Any]:
         return {

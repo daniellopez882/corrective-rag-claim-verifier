@@ -13,6 +13,7 @@ from crag_verifier.aggregate import (
     label_doc,
     sentence_evidence,
     strip_evidence,
+    threshold_candidates,
     verdict,
 )
 from crag_verifier.data import Claim, GoldEvidence
@@ -76,12 +77,30 @@ def test_fit_aggregator_finds_the_grid_optimum() -> None:
             e, c = rng.random(), rng.random()
             docs.append(DocEvidence(d, float(e), float(c), (0,), (0,)))
         evidence.append(docs)
-    params, f1 = fit_aggregator(claims, evidence)
+    fit = fit_aggregator(claims, evidence)
+    entail = np.array([ev.entail for docs in evidence for ev in docs])
+    contradict = np.array([ev.contradict for docs in evidence for ev in docs])
     best = 0.0
-    for ts, tc in itertools.product(GRID, GRID):
+    for ts, tc in itertools.product(threshold_candidates(entail), threshold_candidates(contradict)):
         p = AggregatorParams(float(ts), float(tc))
         preds = [predictions_from(c.id, ev, p) for c, ev in zip(claims, evidence, strict=True)]
         best = max(best, evaluate(claims, preds)["abstract_label_only_f1"])
-    assert f1 == pytest.approx(best)
-    preds = [predictions_from(c.id, ev, params) for c, ev in zip(claims, evidence, strict=True)]
-    assert evaluate(claims, preds)["abstract_label_only_f1"] == pytest.approx(f1)
+    assert fit.label_only_f1 == pytest.approx(best)
+    preds = [predictions_from(c.id, ev, fit.params) for c, ev in zip(claims, evidence, strict=True)]
+    assert evaluate(claims, preds)["abstract_label_only_f1"] == pytest.approx(fit.label_only_f1)
+
+
+def test_candidates_reach_below_the_first_grid_step_and_edges_are_reported() -> None:
+    # Every gold abstract has entailment 0.02 and every wrong one 0.0: only a support
+    # threshold in (0, 0.02] separates them, which the 0.05 grid alone cannot express.
+    claims = [Claim(i, f"claim {i}", {i: GoldEvidence("SUPPORT", ((0,),))}) for i in range(6)]
+    evidence = [
+        [DocEvidence(i, 0.02, 0.0, (0,), ()), DocEvidence(100 + i, 0.0, 0.0, (0,), ())]
+        for i in range(6)
+    ]
+    assert 0.0 in GRID
+    fit = fit_aggregator(claims, evidence)
+    assert 0.0 < fit.params.support <= 0.02
+    assert fit.label_only_f1 == pytest.approx(1.0)
+    everything = [[DocEvidence(i, 0.3, 0.0, (0,), ())] for i in range(6)]
+    assert fit_aggregator(claims, everything).edges == {"support": "lowest", "contradict": "lowest"}

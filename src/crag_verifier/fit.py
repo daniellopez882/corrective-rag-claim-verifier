@@ -6,9 +6,10 @@ Order matters because each step consumes the previous one:
 2. strip relevance threshold (sentence-selection F1 against gold rationales);
 3. NLI aggregator thresholds per evidence mode (abstract label-only F1);
 4. run the CORRECT and AMBIGUOUS actions on every claim and score each outcome with the
-   per-claim utility TP - fp_cost * FP (abstaining scores 0);
+   per-claim utility TP - fp_cost * FP (abstaining scores 0). Each claim is labelled by
+   an aggregator fitted on the other folds, so the utilities are held-out estimates;
 5. evaluator: logistic scorer, cross-validated calibration (Platt or isotonic, chosen on
-   held-out log-loss), out-of-fold probabilities;
+   held-out log-loss), and nested held-out probabilities;
 6. three-way thresholds per evidence mode from the utility table.
 """
 
@@ -36,6 +37,7 @@ from crag_verifier.evaluator import (
     gold_in_top,
     out_of_fold_scores,
     select_calibration,
+    stratified_folds,
 )
 from crag_verifier.pipeline import FittedPolicy, InitialAnalysis, Pipeline
 from crag_verifier.policy import (
@@ -44,6 +46,7 @@ from crag_verifier.policy import (
     UtilityTable,
     action_counts,
     decide,
+    envelope,
     fit_thresholds,
 )
 from crag_verifier.retrieval import RetrievalResult
@@ -173,8 +176,8 @@ def fit_policy(
     min_relevance, strip_f1 = fit_strip_threshold(pipeline, runs, progress)
 
     top = pipeline.top_n
-    aggregator = {}
-    aggregator_f1 = {}
+    aggregator: dict[EvidenceMode, AggregatorParams] = {}
+    aggregator_report: dict[str, Any] = {}
     evidence_correct: dict[EvidenceMode, list[list[DocEvidence]]] = {}
     evidence_ambiguous: dict[EvidenceMode, list[list[DocEvidence]]] = {}
     for mode in EvidenceMode:
@@ -188,7 +191,9 @@ def fit_policy(
             )
             for r in _each(runs, f"fit:evidence-{mode.value}", progress)
         ]
-        aggregator[mode], aggregator_f1[mode.value] = fit_aggregator(claims, evidence_correct[mode])
+        fitted = fit_aggregator(claims, evidence_correct[mode])
+        aggregator[mode] = fitted.params
+        aggregator_report[mode.value] = fitted.report()
         evidence_ambiguous[mode] = [
             pipeline.evidence(
                 r.claim.text, r.expanded.top(top), mode, min_relevance, r.initial.sentence_probs
@@ -196,20 +201,27 @@ def fit_policy(
             for r in _each(runs, f"fit:expanded-evidence-{mode.value}", progress)
         ]
 
+    # Utilities are scored with an aggregator that did not see the claim, as on dev.
+    k_folds = max(2, min(folds, int(y.sum()), int(len(y) - y.sum())))
+    fold_of = stratified_folds(y, k_folds, seed)
     utilities: dict[EvidenceMode, dict[Action, np.ndarray]] = {}
     for mode in EvidenceMode:
-        u_correct = np.array(
-            [
-                claim_utility(r.claim, predictions_from(r.claim.id, ev, aggregator[mode]), fp_cost)
-                for r, ev in zip(runs, evidence_correct[mode], strict=True)
-            ]
-        )
-        u_ambiguous = np.array(
-            [
-                claim_utility(r.claim, predictions_from(r.claim.id, ev, aggregator[mode]), fp_cost)
-                for r, ev in zip(runs, evidence_ambiguous[mode], strict=True)
-            ]
-        )
+        u_correct = np.empty(len(runs))
+        u_ambiguous = np.empty(len(runs))
+        for f in range(k_folds):
+            train_idx = np.flatnonzero(fold_of != f)
+            params = fit_aggregator(
+                [claims[i] for i in train_idx], [evidence_correct[mode][i] for i in train_idx]
+            ).params
+            for i in np.flatnonzero(fold_of == f):
+                r = runs[i]
+                for out, ev in (
+                    (u_correct, evidence_correct[mode][i]),
+                    (u_ambiguous, evidence_ambiguous[mode][i]),
+                ):
+                    out[i] = claim_utility(
+                        r.claim, predictions_from(r.claim.id, ev, params), fp_cost
+                    )
         utilities[mode] = {
             Action.INCORRECT: np.zeros(len(runs)),
             Action.AMBIGUOUS: u_ambiguous,
@@ -221,22 +233,25 @@ def fit_policy(
     method = calibration
     if calibration == "auto":
         method, selection_losses = select_calibration(oof_raw, y)
-    evaluator, p_oof = RetrievalEvaluator.fit(x, y, method, k=folds, seed=seed)
+    evaluator, p_held_out = RetrievalEvaluator.fit(x, y, method, k=folds, seed=seed)
 
     thresholds = {}
     threshold_report: dict[str, Any] = {}
     for mode in EvidenceMode:
         table = UtilityTable.from_outcomes(utilities[mode], y)
-        thresholds[mode], how = fit_thresholds(table, p_oof)
-        chosen = [decide(float(p), thresholds[mode]) for p in p_oof]
+        thresholds[mode], how = fit_thresholds(table, p_held_out)
+        chosen = [decide(float(p), thresholds[mode]) for p in p_held_out]
         realised = float(np.mean([utilities[mode][a][i] for i, a in enumerate(chosen)]))
         threshold_report[mode.value] = {
             "utility_table": table.to_dict(),
+            "envelope": [
+                {"from": lo, "to": hi, "action": a.value} for lo, hi, a in envelope(table)
+            ],
             "thresholds": thresholds[mode].to_dict(),
             "method": how,
-            "oof_mean_utility_policy": realised,
+            "held_out_mean_utility_policy": realised,
             "mean_utility_always": {a.value: float(np.mean(utilities[mode][a])) for a in ACTIONS},
-            "oof_action_counts": action_counts(chosen),
+            "held_out_action_counts": action_counts(chosen),
         }
 
     report = {
@@ -244,11 +259,12 @@ def fit_policy(
         "retrieval_correct_rate": float(y.mean()),
         "strip_min_relevance": min_relevance,
         "strip_sentence_selection_f1": strip_f1,
-        "aggregator": {m.value: aggregator[m].to_dict() for m in EvidenceMode},
-        "aggregator_label_only_f1": aggregator_f1,
+        "aggregator": aggregator_report,
+        "aggregator_note": "label_only_f1 is in-sample on train; the utility table below is "
+        "scored with aggregators fitted on the other folds",
         "calibration_method": method,
         "calibration_selection_logloss": selection_losses,
-        "oof_calibrated": _calibration_report(p_oof, y),
+        "held_out_calibrated": _calibration_report(p_held_out, y),
         "fp_cost": fp_cost,
         "folds": folds,
         "thresholds": threshold_report,
