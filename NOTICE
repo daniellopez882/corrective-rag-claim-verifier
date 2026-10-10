@@ -1,0 +1,20 @@
+corrective-rag-claim-verifier
+Copyright (c) 2026 Daniel Lopez
+
+The source code in this repository is released under the MIT licence in LICENSE.
+
+That licence does not cover text quoted from SciFact. Claim texts, abstract titles and
+abstract sentences from SciFact appear in README.md and in bench/results/*.json (for
+example the /verify exchanges in bench/results/verify-examples.json and the abstained
+claims in bench/results/scifact-dev.json). They come from:
+
+  SciFact, Allen Institute for AI (AllenAI)
+  https://github.com/allenai/scifact
+  Licence: Creative Commons Attribution-NonCommercial 2.0 (CC BY-NC 2.0)
+
+They keep that licence: attribution required, non-commercial use only. The SciFact
+corpus and claim files themselves are not in this repository; `crag-verifier fetch`
+downloads them.
+
+The demo corpus and claims in src/crag_verifier/demo/ were written for this repository,
+describe nothing real, and are covered by the MIT licence.
