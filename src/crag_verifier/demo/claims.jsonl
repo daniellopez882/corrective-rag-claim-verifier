@@ -16,3 +16,9 @@
 {"id": 16, "claim": "Green tea prevents seasonal allergies.", "evidence": {}, "cited_doc_ids": [101]}
 {"id": 17, "claim": "Velorin is approved for human use.", "evidence": {}, "cited_doc_ids": [101]}
 {"id": 18, "claim": "Quastatin lowers cholesterol in children.", "evidence": {}, "cited_doc_ids": [101]}
+{"id": 19, "claim": "Velorin lowers fasting blood glucose in humans.", "evidence": {}, "cited_doc_ids": [101]}
+{"id": 20, "claim": "Quastatin causes elevated liver enzymes in children.", "evidence": {}, "cited_doc_ids": [102]}
+{"id": 21, "claim": "Strain K4 degrades polystyrene film.", "evidence": {}, "cited_doc_ids": [108]}
+{"id": 22, "claim": "Daily walking improves sleep quality in teenagers.", "evidence": {}, "cited_doc_ids": [104]}
+{"id": 23, "claim": "Coffee intake shortens reaction time in older adults.", "evidence": {}, "cited_doc_ids": [106]}
+{"id": 24, "claim": "Zinc supplementation shortens the duration of influenza.", "evidence": {}, "cited_doc_ids": [107]}

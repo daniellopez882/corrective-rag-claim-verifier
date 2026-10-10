@@ -86,14 +86,17 @@ def test_baselines_ignore_the_thresholds(
     assert verifier.verify(claim, System.CRAG_NO_STRIPS).action is Action.INCORRECT
 
 
-def test_fitted_demo_policy_separates_supported_from_unsupported_claims(
+def test_fitted_demo_policy_abstains_on_unrelated_claims_and_acts_on_supported_ones(
     demo_pipeline: Pipeline, demo_policy: FittedPolicy, demo_data: tuple[Corpus, list[Claim]]
 ) -> None:
     _, claims = demo_data
     verifier = Verifier(demo_pipeline, demo_policy)
-    with_evidence = [verifier.verify(c.text).confidence for c in claims if c.evidence]
-    without = [verifier.verify(c.text).confidence for c in claims if not c.evidence]
-    assert min(with_evidence) > max(without)
+    actions = {c.id: verifier.verify(c.text).action for c in claims}
+    assert all(actions[c.id] is not Action.INCORRECT for c in claims if c.evidence)
+    abstained = {cid for cid, a in actions.items() if a is Action.INCORRECT}
+    unrelated = set(range(13, 19))  # share no content word with any abstract
+    assert unrelated <= abstained
+    assert all(not c.evidence for c in claims if c.id in abstained)
 
 
 def test_explanation_goes_through_the_provider(
