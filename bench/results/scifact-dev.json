@@ -1,8 +1,8 @@
 {
   "benchmark": "SciFact dev, official claim-verification metrics",
-  "date": "2026-10-10",
-  "git_sha": "f02b8b536a0edd2d71f894a2504b924c46cf9734",
-  "command": "uv run crag-verifier bench --latency-requests 0",
+  "date": "2026-10-11",
+  "git_sha": "43cd5b08dad69d1fcd8c2863a78e5ab9af886bbd",
+  "command": "uv run crag-verifier bench",
   "machine": {
     "cpu": "Intel(R) Core(TM) i5-8500 CPU @ 3.00GHz",
     "logical_cpus": 6,
@@ -61,11 +61,27 @@
     "utility": "per claim: correct labelled abstracts minus wrong ones; abstain = 0"
   },
   "timings_s": {
-    "index_build_s": 1.7488976000022376,
+    "index_build_s": 1.1879716999974335,
     "dense_encoding_s": 0.0,
-    "train_fit_s": 12.214963499995065,
-    "dev_systems_s": 15.086349899997003,
-    "total_s": 37.12273630000709
+    "train_fit_s": 7.67695090000052,
+    "dev_systems_s": 4.82988689999911,
+    "latency_s": 159.13583559999825,
+    "total_s": 177.56157059999532
+  },
+  "cold_cache_run": {
+    "date": "2026-10-09",
+    "git_sha": "ad7dd1f413fde9d123ae8efb93347410582679b1",
+    "command": "uv run crag-verifier bench --out bench/results/scifact-dev.json",
+    "systems": 4,
+    "timings_s": {
+      "index_build_s": 1.1451239999732934,
+      "dense_encoding_s": 0.0,
+      "train_fit_s": 1225.768543000042,
+      "dev_systems_s": 455.2629241000395,
+      "latency_s": 151.08750679995865,
+      "total_s": 1837.747253599984
+    },
+    "note": "wall time of every stage of the last full run that started with an empty score cache; four systems at the time, dense index already on disk; its quality and latency numbers are superseded"
   },
   "train_fit": {
     "n_claims": 809,
@@ -1095,7 +1111,7 @@
         }
       ]
     },
-    "latency": "not measured in this run (--latency-requests 0)"
+    "latency": "see scifact-dev-latency.json"
   },
   "not_run": {
     "llm_query_rewrite": "not run: needs an LLM endpoint; keyphrase rewriting is used",

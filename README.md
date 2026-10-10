@@ -157,10 +157,10 @@ uv run crag-verifier serve     # http://127.0.0.1:8000/docs
 
 `index` is the slowest one-off step: it encodes every abstract and prints progress every
 640 of them. Its time was not recorded in a results file; expect tens of minutes on a
-desktop CPU. `fit` took 1,226 s in the recorded run that started with an empty
+desktop CPU. `fit` took 1,226 s in the last recorded run that started with an empty
 score cache, almost all of it model forward passes over the 809 train claims. Outputs are
 memoised in a SQLite file in the data directory, so running `fit` or `bench` again takes
-seconds (12 s for the fit in the latest run).
+seconds (8 s for the fit in the latest run).
 
 `fit`, or the benchmark, which does the same and more, writes `policy.json` into the data
 directory. The service refuses to start on SciFact without it and says which command is
@@ -248,8 +248,9 @@ F1 values come from `evaluator/eval.py` of `allenai/scifact-evaluator`. The in-r
 used for the bootstrap matched it on every metric of all six systems, with differences
 below 1e-9 ([ADR 4](docs/adr/0004-official-evaluator-as-the-scorer.md)).
 
-Run record: `bench/results/scifact-dev.json`, produced on 2026-10-10 by
-`uv run crag-verifier bench --latency-requests 0` at commit `f02b8b5`. Measured on one
+Run record: `bench/results/scifact-dev.json`, produced on 2026-10-11 by
+`uv run crag-verifier bench` at commit `43cd5b0`, the run that also timed the requests in
+[/verify latency](#verify-latency). Measured on one
 Windows 10 desktop: Intel i5-8500 (6 cores), 12 GB RAM (11.9 GB visible to the OS), CPU
 only with no GPU, Python 3.12, onnxruntime 1.31.
 
@@ -316,19 +317,21 @@ JSON. Per-claim actions and predictions for all 300 claims go to the git-ignored
 
 Sequential requests over loopback HTTP to a server running the full CRAG system with the
 ONNX models and no score cache, after two warm-up requests, on the first 100 dev claims.
-Measured on the same desktop on 2026-10-09 at commit `ad7dd1f`, under the policy fitted
-then: lower 0.55, upper 1.0, which abstained on 42 of the 100 claims and re-retrieved and
-refined the other 58. The current policy never re-retrieves, so it does less work per request, but it
-has not been timed.
+Measured on the same desktop on 2026-10-11 at commit `43cd5b0`, under the fitted policy
+described above: it abstained on 51 of the 100 claims and refined the top 3 of the other
+49, with no re-retrieval. The desktop was not otherwise idle. In the minute before the
+run, other applications and the Docker VM kept total CPU use at 43% on average, and the
+ONNX sessions share the same six cores with them.
 
 | Requests | p50 | p95 | Mean | Max | Slowest step (median) |
 |---|---|---|---|---|---|
-| 100 | 1,447 ms | 2,204 ms | 1,479 ms | 2,747 ms | retrieve, 594 ms |
+| 100 | 1,417 ms | 2,773 ms | 1,559 ms | 3,889 ms | retrieve, 648 ms |
 | with `"explain": true` | not run (needs an LLM endpoint) | | | | |
 
-Median step times: retrieve 594 ms, NLI over the top-3 sentences 479 ms, refine 314 ms,
-re-retrieve 219 ms, evaluate 0.08 ms. Source: `bench/results/scifact-dev-latency.json`,
-same machine as above.
+Median step times: retrieve 648 ms, NLI over the top-3 sentences 520 ms, refine 427 ms
+(over the 49 refined requests), evaluate 0.09 ms. An abstained request ends after the
+evaluator, so it pays for retrieval and NLI only. Source:
+`bench/results/scifact-dev-latency.json`, same machine as above.
 
 ## Architecture
 
@@ -404,11 +407,14 @@ measurement bypasses that cache. Predictions and the official script's metric fi
 SVG next to it. The run also rewrites `policy.json` in the data directory, which is the
 policy the service then loads.
 
-The full run behind the latency file, which still had four systems, took 1,838 s from an
-empty score cache: 1,226 s fitting on train, 455 s on dev, and 151 s timing requests. The
-dense index was already on disk, so its encoding time is not part of it. The current
-results file is a quality-only re-run on the warm cache (37 s). An earlier full run, made
-before the int8 batching fix, was discarded, and none of its numbers appear here.
+The latest full run, which wrote both results files, took 178 s on the warm score cache,
+of which 8 s fitting on train, 5 s running the six systems on dev and 159 s timing
+requests. From an empty score cache, model forward passes dominate: the last run that
+started empty (2026-10-09, commit `ad7dd1f`, four systems at the time) took 1,838 s, of
+which 1,226 s fitting on train, 455 s on dev and 151 s timing requests. Its timings are
+kept under `cold_cache_run` in `scifact-dev.json`. The dense index was already on disk in
+both runs, so its encoding time is not part of either. An earlier full run, made before
+the int8 batching fix, was discarded, and none of its numbers appear here.
 
 `bench --smoke` runs the same harness on 25 train and 12 dev claims with a 120-abstract
 corpus sample to check that it works end to end. It writes
@@ -462,8 +468,9 @@ Pinned sha256 values live in `src/crag_verifier/artifacts.py`.
   thresholds are held out.
 * The LLM query rewrite and the LLM explanation are implemented behind the provider
   interface but **not run** in any reported number; all results use keyphrase rewriting.
-* Latency is for one request at a time on one desktop CPU, under the earlier policy. The
-  service serialises verifications because each ONNX session already uses every core.
+* Latency is for one request at a time on one desktop CPU that was also running other
+  applications. The service serialises verifications because each ONNX session already
+  uses every core.
 * `--backend demo` exists for tests and smoke runs. Its corpus is invented and its models
   are word-overlap rules; it verifies nothing real.
 
